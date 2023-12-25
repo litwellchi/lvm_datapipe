@@ -37,3 +37,18 @@ data pipeline code of large video generation model
  "misc":{}
 }
 ```
+## file structure
+Please structure the dataset as follows:
+```
+|video_dataset_0
+    |clip1.mp4
+    |clip2.mp4
+    |...
+    |label.json
+ |video_dataset_1
+    |clip1.mp4
+    |clip2.mp4
+    |...
+    |label.json
+```
+For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compress.
