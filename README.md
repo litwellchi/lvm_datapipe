@@ -1,6 +1,7 @@
 # lvm_datapipe
 data pipeline code of large video generation model
 ## Metadata formats
+For each clip, it should have one json format metadata.
 ```
 {
 "basic": {
@@ -44,11 +45,11 @@ Please structure the dataset as follows:
     |clip1.mp4
     |clip2.mp4
     |...
-    |label.json
+    |metadata.json
  |video_dataset_1
     |clip1.mp4
     |clip2.mp4
     |...
-    |label.json
+    |metadata.json
 ```
-For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compress.
+For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
