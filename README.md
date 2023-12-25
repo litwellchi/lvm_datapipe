@@ -1,7 +1,7 @@
 # lvm_datapipe
 data pipeline code of large video generation model
 ## Metadata formats
-"""
+```
 {
 "basic": {
     video_id: "string",  # clip属于哪个video 
@@ -36,4 +36,4 @@ data pipeline code of large video generation model
     }
  "misc":{}
 }
-"""
+```
