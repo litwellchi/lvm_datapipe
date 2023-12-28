@@ -9,7 +9,7 @@ For each clip, it should have one json format metadata.
     video_path: string, # source video path 
     video_duration: float(s),
     video_resolution: [height, weight] 
-    video_fps: int,
+    video_fps: float,
     clip_id: "string",
     clip_path: string, 
     clip_duration: float(s),
