@@ -37,7 +37,7 @@ def find_scenes(video_path, threshold=27.0):
     return scene_manager.get_scene_list()
 
 
-def main(vid_dir, out_dir, file_list):
+def main(vid_dir, out_dir, file_list, queue):
     threshold = 30.0
 
     metas = []
@@ -65,25 +65,31 @@ def main(vid_dir, out_dir, file_list):
 
                 metas.append(metadata)
 
-    out_json_path = os.path.join(out_dir, 'metadata.json')
-    with open(out_json_path, 'w+') as oj:
-        json.dump(metas, oj)
-
+    queue.put(metas)
 
 def run__process(vid_dir, out_dir, num_process):
     process = []
-    os.makedirs(out_dir, exist_ok=True)
+    results = []
+    queue = mp.Queue()
 
+    os.makedirs(out_dir, exist_ok=True)
     if not os.path.isabs(vid_dir):
         vid_dir = os.path.abspath(vid_dir)
 
     file_list = os.listdir(vid_dir)
     chunk_size = len(file_list) // num_process if len(file_list) >= num_process else len(file_list)
     chunks = [file_list[i:i + chunk_size] for i in range(0, len(file_list), chunk_size)]
+
     for chunk in chunks:
-        process.append(mp.Process(target=main, args=(vid_dir, out_dir, chunk)))
+        process.append(mp.Process(target=main, args=(vid_dir, out_dir, chunk, queue)))
     [p.start() for p in process]  # 开启了len(threshold_list)个进程
     [p.join() for p in process]
+    for _ in process:
+        results.extend(queue.get())
+
+    out_json_path = os.path.join(out_dir, 'metadata.json')
+    with open(out_json_path, 'w+') as oj:
+        json.dump(results, oj)
 
 
 if __name__ == "__main__":
@@ -94,4 +100,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run__process(args.vid_dir, args.out_dir, int(args.num_process))
+
+
+
 
