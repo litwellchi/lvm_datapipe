@@ -1,5 +1,11 @@
-# lvm_datapipe
+![image](https://github.com/litwellchi/lvm_datapipe/assets/94704855/343c179c-d55a-40e7-85d4-722ec72e41f3)# lvm_datapipe
 data pipeline code of large video generation model
+## Notification
+代码都还在初步阶段，请把运行脚本和代码push上来。后续再继续维护模块化。
+```
+scene cut:@yatian
+Textcaption:@aosong
+```
 ## Metadata formats
 For each clip, it should have one json format metadata.
 ```
@@ -53,3 +59,14 @@ Please structure the dataset as follows:
     |metadata.json
 ```
 For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
+
+## Storage Position
+公网ip：
+```
+V00s:36.133.54.47 -p 65022
+cpu:36.138.58.171 -p 65022
+```
+### 盐城算力集群
+```
+从cpu copy到v100走内网ip大概200兆s： v100s003: 192.168.0.224，cpu001: 192.168.0.190
+```
