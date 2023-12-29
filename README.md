@@ -1,4 +1,3 @@
-![image](https://github.com/litwellchi/lvm_datapipe/assets/94704855/343c179c-d55a-40e7-85d4-722ec72e41f3)# lvm_datapipe
 data pipeline code of large video generation model
 ## Notification
 代码都还在初步阶段，请把运行脚本和代码push上来。后续再继续维护模块化。
