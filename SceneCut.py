@@ -1,9 +1,9 @@
 import os
-import time
-
+import subprocess
+import json
+import tqdm
 import multiprocessing as mp
 
-import cv2
 import argparse
 from tqdm import tqdm
 # Standard PySceneDetect imports:
@@ -16,15 +16,19 @@ from scenedetect.detectors import ContentDetector, AdaptiveDetector
 from scenedetect.video_splitter import split_video_ffmpeg
 
 
-def find_scenes(video_path, det_type='c', threshold=27.0):
+def get_video_resolution(video_path):
+    command = ['ffprobe', '-v', 'error', '-show_entries', 'stream=width,height', '-of', 'json', video_path]
+    result = subprocess.check_output(command)
+    res_data = json.loads(result)
+    width = res_data['streams'][0]['width']
+    height = res_data['streams'][0]['height']
+    return [int(height), int(width)]
+
+def find_scenes(video_path, threshold=27.0):
     # Create our video & scene managers, then add the detector.
     video = open_video(video_path)
     scene_manager = SceneManager()
-    if det_type == 'a':
-        scene_manager.add_detector(
-            AdaptiveDetector(adaptive_threshold=threshold))
-    elif det_type == 'c':
-        scene_manager.add_detector(
+    scene_manager.add_detector(
             ContentDetector(threshold=threshold))
 
     scene_manager.detect_scenes(video)
@@ -33,64 +37,61 @@ def find_scenes(video_path, det_type='c', threshold=27.0):
     return scene_manager.get_scene_list()
 
 
-def main(vid_dir, out_dir, det_type, threshold):
-    times = []
-    if args.vid_dir[-4:] in ['.mp4', '.mkv', '.mpg', '.mpeg', '.avi', '.rm', '.rmvb', '.mov', '.wmv', '.asf', '.dat']:
-        vid_path = os.path.join(args.vid_dir)
-        # for threshold in threshold_list:
-        t0 = time.time()
-        scenes = find_scenes(vid_path, det_type, threshold=threshold)
-        t1 = time.time()
-        out_dir = os.path.join(args.out_dir, ''.join(os.path.basename(args.vid_dir).split('.')[:-1]) + '_' + str(threshold))
-        os.makedirs(out_dir, exist_ok=True)
-        for index, scene in enumerate(scenes):
-            split_video_ffmpeg(vid_path, [scene], f"{out_dir}/{index + 1:05}.mp4")
-        t2 = time.time()
-        times.append([threshold, t1-t0, t2-t1])
-    else:
-        for vid_name in tqdm(os.listdir(args.vid_dir)):
-            if vid_name[-4:] not in ['.mp4', '.mkv', '.mpg', '.mpeg', '.avi', '.rm', '.rmvb', '.mov', '.wmv', '.asf', '.dat']:
-                continue
-            vid_path = os.path.join(args.vid_dir, vid_name)
-            # for threshold in threshold_list:
-            t0 = time.time()
-            scenes = find_scenes(vid_path, det_type, threshold=threshold)
-            t1 = time.time()
-            out_dir = os.path.join(args.out_dir, vid_name+'_'+str(threshold))
-            os.makedirs(out_dir, exist_ok=True)
+def main(vid_dir, out_dir, file_list):
+    threshold = 30.0
+
+    metas = []
+    for vid_file in tqdm(file_list):
+        if '.' in vid_file:
+            vid_name, vid_ext = vid_file.rsplit('.', 1)
+        else:
+            continue
+        if vid_ext in ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'mpeg', 'mpg']:
+            vid_path = os.path.join(vid_dir, vid_file)
+            scenes = find_scenes(vid_path, threshold=threshold)
             for index, scene in enumerate(scenes):
-                split_video_ffmpeg(vid_path, [scene], f"{out_dir}/{index + 1:05}.mp4")
-            t2 = time.time()
-            times.append([threshold, t1 - t0, t2 - t1])
+                metadata = {'basic': {}, 'scene': {}, 'camera': {}, 'misc': {}}
+                metadata['basic']['video_id'] = vid_name
+                metadata['basic']['video_path'] = os.path.join(os.path.basename(vid_dir), vid_file)
+                metadata['basic']['video_resolution'] = get_video_resolution(vid_path)
+                metadata['basic']['video_duration'] = scenes[-1][1].get_seconds()
+                metadata['basic']['video_fps'] = scenes[0][0].get_framerate()
+                metadata['basic']['clip_id'] = f'{vid_name}_{"%07d" % index}'
+                metadata['basic']['clip_path'] = f"{os.path.basename(out_dir)}/{metadata['basic']['clip_id']}.mp4"
+                metadata['basic']['clip_duration'] = (scene[1] - scene[0]).get_seconds()
+                metadata['basic']['clip_start_end_idx'] = [scene[0].get_frames(), scene[1].get_frames()]
+                metadata['basic']['optimal_score'] = None
+                split_video_ffmpeg(vid_path, [scene], f"{out_dir}/{metadata['basic']['clip_id']}.mp4")
 
-    for tm in times:
-        print('Threshold: '+ str(tm[0]) + ' -- FindScenesTime: ' + str(tm[1]) + ', CutScenesTime: ' + str(tm[2]))
+                metas.append(metadata)
+
+    out_json_path = os.path.join(out_dir, 'metadata.json')
+    with open(out_json_path, 'w+') as oj:
+        json.dump(metas, oj)
 
 
-def run__process(vid_dir, out_dir, det_type, threshold_list):
+def run__process(vid_dir, out_dir, num_process):
     process = []
-    for threshold in threshold_list:
-        process.append(mp.Process(target=main, args=(vid_dir, out_dir, det_type, threshold)))
+    os.makedirs(out_dir, exist_ok=True)
+
+    if not os.path.isabs(vid_dir):
+        vid_dir = os.path.abspath(vid_dir)
+
+    file_list = os.listdir(vid_dir)
+    chunk_size = len(file_list) // num_process if len(file_list) >= num_process else len(file_list)
+    chunks = [file_list[i:i + chunk_size] for i in range(0, len(file_list), chunk_size)]
+    for chunk in chunks:
+        process.append(mp.Process(target=main, args=(vid_dir, out_dir, chunk)))
     [p.start() for p in process]  # 开启了len(threshold_list)个进程
     [p.join() for p in process]
 
-if __name__ =='__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--vid_dir', type=str)
     parser.add_argument('--out_dir', type=str)
-    parser.add_argument('--det_type', type=str, help='Including: "c": ContentDetector, "a": AdaptiveDetector')
+    parser.add_argument('--num_process', type=str)
     args = parser.parse_args()
 
-    os.makedirs(args.out_dir, exist_ok=True)
-    threshold_list = []
-    if args.det_type == 'a':
-        # threshold_list = [5.0]    # best
-        threshold_list = [5.0, 8.0, 10.0, 15.0]
-    elif args.det_type == 'c':
-        # threshold_list = [30.0]   # best
-        threshold_list = [30.0, 20.0, 40.0, 50.0, 35.0, ]
-                          # 25.0, 45.0, 15.0, 10.0, 27.0, \
-                          # 32.0, 37.0, 42.0, 17.0, 22.0, \
-                          # 36.0, 33.0, 28.0, 29.0, 31.0, \
-                          # 34.0, 38.0, 39.0, 41.0, 60.0]
-    run__process(args.vid_dir, args.out_dir, args.det_type, threshold_list)
+    run__process(args.vid_dir, args.out_dir, int(args.num_process))
+
