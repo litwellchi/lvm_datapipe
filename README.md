@@ -60,12 +60,12 @@ Please structure the dataset as follows:
 For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
 
 ## Storage Position
-公网ip：
+盐城算力集群公网ip：
 ```
 V00s:36.133.54.47 -p 65022
 cpu:36.138.58.171 -p 65022
 ```
-### 盐城算力集群
+内网拷贝
 ```
 从cpu copy到v100走内网ip大概200兆s： v100s003: 192.168.0.224，cpu001: 192.168.0.190
 ```
