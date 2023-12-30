@@ -62,8 +62,11 @@ For each `video_dataset_x` folder, it should contain at most 1 million clips, an
 ## Storage Position
 盐城算力集群公网ip：
 ```
-V00s:36.133.54.47 -p 65022
+V100s:36.133.54.47 -p 65022
+gpu:/data/shared_zipdata/
 cpu:36.138.58.171 -p 65022
+cpu data root：/data/zip_cloud/
+
 ```
 内网拷贝
 ```
