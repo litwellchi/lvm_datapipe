@@ -71,4 +71,5 @@ cpu data root：/data/zip_cloud/
 内网拷贝
 ```
 从cpu copy到v100走内网ip大概200兆s： v100s003: 192.168.0.224，cpu001: 192.168.0.190
+cpu to v100: scp -P /data/shared_zipdata/video_dataset_x user@192.168.0.224:/data/zip_cloud/
 ```
