@@ -40,7 +40,7 @@ def find_scenes(video_path, threshold=27.0):
 def main(vid_dir, out_dir, file_list):
     threshold = 30.0
 
-    with open(os.path.join(out_dir, 'metadata.txt'), 'a') as out_file:
+    with open(os.path.join(out_dir, 'metadata.json'), 'a') as out_file:
         for vid_file in tqdm(file_list):
             try:
                 if '.' in vid_file:
@@ -65,9 +65,10 @@ def main(vid_dir, out_dir, file_list):
                         split_video_ffmpeg(vid_path, [scene], f"{out_dir}/{metadata['basic']['clip_id']}.mp4")
 
                         output_metadata = json.dumps(metadata)
-                        out_file.write(output_metadata + '\n')
+                        out_file.write(output_metadata + ', ')
             except Exception as e:
-                print("An error occurred:", str(e))
+                print("An error occurred:", str(e), "Video: ", vid_path)
+                continue
 
 
 def run__process(vid_dir, out_dir, num_process):
@@ -75,11 +76,11 @@ def run__process(vid_dir, out_dir, num_process):
     results = []
 
     os.makedirs(out_dir, exist_ok=True)
-    out_json_path = os.path.join(out_dir, 'metadata.txt')
+    out_json_path = os.path.join(out_dir, 'metadata.json')
     if not os.path.isabs(vid_dir):
         vid_dir = os.path.abspath(vid_dir)
     with open(out_json_path, 'w') as oj:
-        pass
+        oj.write('[')
 
     file_list = os.listdir(vid_dir)
     chunk_size = len(file_list) // num_process if len(file_list) >= num_process else len(file_list)
@@ -89,6 +90,8 @@ def run__process(vid_dir, out_dir, num_process):
         process.append(mp.Process(target=main, args=(vid_dir, out_dir, chunk)))
     [p.start() for p in process]  # 开启了len(threshold_list)个进程
     [p.join() for p in process]
+    with open(out_json_path, 'a') as oj:
+        oj.write(']')
 
 
 if __name__ == "__main__":
