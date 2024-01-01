@@ -41,11 +41,10 @@ class VideoDataset(Dataset):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, i)
                 _, frame = cap.read()
                 frame_list.append(Image.fromarray(frame).convert("RGB"))
-
             return frame_list
-
         except:
-            raise Exception("Failed to open video file.")
+            raise Exception(f"Failed to open video file {clip_path}.")
+
 
 
 def main(args):
@@ -56,6 +55,11 @@ def main(args):
     save_metadata_path = metadata_path.replace('metadata', 'metadata_catpion')
     with open(metadata_path, 'r') as f:
         metadata_list = json.load(f)
+    
+    # TODO
+    # rough filtered_list
+    metadata_list = [item for item in metadata_list if item['basic']["clip_duration"] > 1.0]
+    
 
     model, _, transform = open_clip.create_model_and_transforms(
         model_name="coca_ViT-L-14",
@@ -68,10 +72,10 @@ def main(args):
 
     dataset = VideoDataset(metadata_list, args.video_path, args.num_frames, transform)
     sampler = DistributedSampler(dataset, num_replicas=args.world_size, rank=args.local_rank)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers)
 
     start_time = time.time()
-
+    sub_metadata_list=[]
     for batch_frame, idx in tqdm.tqdm(dataloader):
         batch_frame = batch_frame.view(-1, *batch_frame.shape[2:]).to(args.local_rank)
         with torch.no_grad(), torch.cuda.amp.autocast():
@@ -83,24 +87,36 @@ def main(args):
             result_list = [open_clip.decode(generated[count][i]).split("<end_of_text>")[0].replace("<start_of_text>", "") for i in
                            range(args.num_frames)]
             metadata_list[idx[count]]['misc']['frame_caption'] = result_list
+            sub_metadata_list.append(metadata_list[idx[count]])
 
+    # 
+    save_metadata_path = metadata_path.replace('metadata', f'metadata_catpion_{args.local_rank}')
+    with open(save_metadata_path, 'w') as f:
+        json.dump(sub_metadata_list, f)
+
+    dist.barrier()
     if args.local_rank == 0:
+        save_metadata_path = metadata_path.replace('metadata', f'metadata_catpion')
+        all_caption = []
+        for i in range(args.world_size):
+          with open(save_metadata_path.replace('metadata_catpion',f"metadata_catpion_{i}"), 'r') as f:
+              metadata_list = json.load(f)
+              all_caption.extend(metadata_list)
         with open(save_metadata_path, 'w') as f:
-            json.dump(metadata_list, f)
-
-        end_time = time.time()
-        print(end_time - start_time)
+          json.dump(all_caption, f)
+        print(f"processing time:{time.time()-start_time}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
     parser.add_argument('--video_path', default='freeguy_test', help='Path to the video folder')
     parser.add_argument('--num_frames', default=3, help='number of frames extract from one clip video')
-    parser.add_argument('--batch_size', default=8, help='inference batch size')
+    parser.add_argument('--batch_size', default=8, type=int, help='inference batch size')
     parser.add_argument('--coca_path', default='coca/open_clip_pytorch_model.bin', help='Path to the coca weight file')
     parser.add_argument('--gpus', default='0,1,2,3,4,5,6,7', help='devices')
     parser.add_argument('--local-rank', default=0, type=int, help='Local rank for distributed training')
     parser.add_argument('--world_size', default=4, type=int, help='Number of GPUs for distributed training')
+    parser.add_argument('--num_workers', default=4, type=int, help='Number of cpu workers for dataloader')
     args = parser.parse_args()
 
     main(args)
