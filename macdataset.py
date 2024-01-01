@@ -38,9 +38,6 @@ class MACVDataset(Dataset):
                 cap.set(cv2.CAP_PROP_POS_FRAMES, i)
                 _, frame = cap.read()
                 frame_list.append(Image.fromarray(frame).convert("RGB"))
-
             return frame_list
-
         except:
-            raise Exception("Failed to open video file.")
-
+            raise Exception(f"Failed to open video file {clip_path}.")
