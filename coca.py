@@ -48,11 +48,11 @@ class VideoDataset(Dataset):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
-    parser.add_argument('--video_path', default='freeguy_test', help='Path to the JSON file')
-    parser.add_argument('--num_frames', default=3, help='Path to the JSON file')
-    parser.add_argument('--batch_size', default=80, help='Path to the JSON file')
-    parser.add_argument('--coca_path', default='coca/open_clip_pytorch_model.bin', help='Path to the JSON file')
-    parser.add_argument('--gpus', default='0', help='devices')
+    parser.add_argument('--video_path', default='freeguy_test', help='Path to the video folder')
+    parser.add_argument('--num_frames', default=3, help='number of frames extract from one clip video')
+    parser.add_argument('--batch_size', default=8, help='inference batch size')
+    parser.add_argument('--coca_path', default='coca/open_clip_pytorch_model.bin', help='Path to the coca weight file')
+    parser.add_argument('--gpus', default='0,1,2,3,4,5,6,7', help='devices')
     args = parser.parse_args()
 
     metadata_path = os.path.join(args.video_path, 'metadata.json')
@@ -71,6 +71,12 @@ if __name__ == "__main__":
         pretrained=args.coca_path,
         device="cuda"
     )
+    
+    # TODO seems have some bug
+    # Use DataParallel for multi-GPU support
+    device_ids = [int(gpu_id) for gpu_id in args.gpus.split(',')]
+    if len(device_ids) > 1:
+        model = torch.nn.DataParallel(model, device_ids=device_ids).module
 
     dataset = VideoDataset(metadata_list, args.video_path, args.num_frames, transform)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
