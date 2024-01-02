@@ -227,7 +227,8 @@ def run__process(vid_dir, out_dir, num_process):
         if os.path.getsize(out_json_path) > 1:
             with open(out_json_path, 'r') as oj:
                 try:
-                    processed_list = json.loads(oj.read())
+                    line = oj.readlines()
+                    processed_list = json.loads(line[0][:-3]+line[0][-3:].replace(', ', ' ]'))
                     finished_list = find_breakpoint(processed_list)
                 except:
                     finished_list = []
