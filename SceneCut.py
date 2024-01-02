@@ -79,15 +79,15 @@ def run__process(vid_dir, out_dir, num_process):
         vid_dir = os.path.abspath(vid_dir)
     os.makedirs(out_dir, exist_ok=True)
     out_json_path = os.path.join(out_dir, 'metadata.json')
-    if os.path.getsize(out_json_path) > 1:
-        with open(out_json_path, 'r') as oj:
-            try:
-                processed_list = json.loads(oj.read())
-                finished_list = find_breakpoint(processed_list)
-            except:
-                finished_list = []
-    else:
-        finished_list = []
+    finished_list = []
+    if os.path.exists(out_json_path):
+        if os.path.getsize(out_json_path) > 1:
+            with open(out_json_path, 'r') as oj:
+                try:
+                    processed_list = json.loads(oj.read())
+                    finished_list = find_breakpoint(processed_list)
+                except:
+                    finished_list = []
 
 
     file_list = os.listdir(vid_dir)
@@ -117,6 +117,16 @@ def run__process(vid_dir, out_dir, num_process):
 
     # Use joblib to allocate processes on CPUs
     Parallel(n_jobs=num_process)(delayed(main)(vid_dir, out_dir, chunk) for chunk in chunks)
+    # from concurrent.futures import ProcessPoolExecutor
+    # with ProcessPoolExecutor(max_workers=num_process) as executor:
+    #     futures = []
+    #     for chunk in chunks:
+    #         future = executor.submit(main, vid_dir, out_dir, chunk)
+    #         futures.append(future)
+    #
+    #     # 获取所有任务的结果
+    #     for future in futures:
+    #         result = future.result()
 
     with open(out_json_path, 'r') as oj:
         line = oj.readlines()
