@@ -102,8 +102,15 @@ def run__process(vid_dir, out_dir, num_process):
     if return_flag:
         return
 
-    with open(out_json_path, 'w') as oj:
-        oj.write('[')
+    if len(finished_list) > 0:
+        with open(out_json_path, 'r') as oj:
+            line = oj.readlines()
+            out = line[0][:-1] + ', '
+        with open(out_json_path, 'w') as oj:
+            oj.write(out)
+    else:
+        with open(out_json_path, 'w') as oj:
+            oj.write('[')
 
     chunk_size = len(file_list) // num_process if len(file_list) >= num_process else len(file_list)
     chunks = [file_list[i:i + chunk_size] for i in range(0, len(file_list), chunk_size)]
@@ -113,7 +120,7 @@ def run__process(vid_dir, out_dir, num_process):
 
     with open(out_json_path, 'r') as oj:
         line = oj.readlines()
-        out = line[0][:-2] + ']'
+        out = line[0][:-2] + ' ]'
     with open(out_json_path, 'w') as oj:
         oj.write(out)
 
