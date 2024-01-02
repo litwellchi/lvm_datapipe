@@ -208,7 +208,7 @@ def main(vid_dir, out_dir, file_list):
                                            f"{out_dir}/{metadata.get_value('basic', 'clip_id')}.mp4")
 
                         output_metadata = json.dumps(metadata.to_dict())
-                        out_file.write(output_metadata + ', ')
+                        out_file.write(output_metadata + ',\n')
             except subprocess.CalledProcessError as e:
                 print("FFmpeg error: ", e.stderr, " :  ", vid_path)
                 continue
