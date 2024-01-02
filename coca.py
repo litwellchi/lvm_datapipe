@@ -28,6 +28,7 @@ class VideoDataset(Dataset):
         metadata = self.metadata_list[idx]
         clip_path = os.path.join(self.video_path, metadata["basic"]["clip_path"])
         frames = self.getImageFromVideo(clip_path, self.num_frames)
+        if frames == None: return None,idx
         trans_frames = [self.transform(frame).unsqueeze(0) for frame in frames]
         batch_frame = torch.cat(trans_frames, dim=0)
         return batch_frame, idx
@@ -47,8 +48,15 @@ class VideoDataset(Dataset):
                 frame_list.append(Image.fromarray(frame).convert("RGB"))
             return frame_list
         except:
-            raise Exception(f"Failed to open video file {clip_path}.")
+            Exception(f"Failed to open video file {clip_path}.")
+            return None
 
+
+def collate_fn(batch):
+    batch = [data for data in batch if data[0] is not None]
+    if len(batch) == 0:
+        return None,0
+    return torch.utils.data.dataloader.default_collate(batch)
 
 
 def main(args):
@@ -76,11 +84,12 @@ def main(args):
 
     dataset = VideoDataset(metadata_list, args.video_path, args.num_frames, transform)
     sampler = DistributedSampler(dataset, num_replicas=args.world_size, rank=args.local_rank)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers, collate_fn=collate_fn)
 
     start_time = time.time()
     sub_metadata_list=[]
     for batch_frame, idx in tqdm.tqdm(dataloader):
+        if batch_frame is None: continue
         batch_frame = batch_frame.view(-1, *batch_frame.shape[2:]).to(args.local_rank)
         with torch.no_grad(), torch.cuda.amp.autocast():
             generated = model.module.generate(batch_frame)
