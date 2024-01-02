@@ -209,6 +209,9 @@ def main(vid_dir, out_dir, file_list):
 
                         output_metadata = json.dumps(metadata.to_dict())
                         out_file.write(output_metadata + ', ')
+            except subprocess.CalledProcessError as e:
+                print("FFmpeg error: ", e.stderr, " :  ", vid_path)
+                continue
             except Exception as e:
                 print("An error occurred:", str(e))
                 continue
