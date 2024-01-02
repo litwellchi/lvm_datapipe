@@ -32,12 +32,16 @@ class VideoDataset(Dataset):
         batch_frame = torch.cat(trans_frames, dim=0)
         return batch_frame, idx
 
-    def getImageFromVideo(self, clip_path, num_frames):
+    def getImageFromVideo(self, clip_path, num_frames=3):
         try:
             cap = cv2.VideoCapture(clip_path)
             frame_list = []
             frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            for i in [0, frame_count // 2, frame_count - 1]:
+            if frame_count <= num_frames:
+                query_list = [0,0,0]
+            else:
+                query_list =  [0, frame_count // 2, frame_count - 1]
+            for i in query_list:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, i)
                 _, frame = cap.read()
                 frame_list.append(Image.fromarray(frame).convert("RGB"))
@@ -92,6 +96,7 @@ def main(args):
     # 
     save_metadata_path = metadata_path.replace('metadata', f'metadata_catpion_{args.local_rank}')
     with open(save_metadata_path, 'w') as f:
+        print(f"save to {save_metadata_path}")
         json.dump(sub_metadata_list, f)
 
     dist.barrier()
@@ -103,7 +108,8 @@ def main(args):
               metadata_list = json.load(f)
               all_caption.extend(metadata_list)
         with open(save_metadata_path, 'w') as f:
-          json.dump(all_caption, f)
+            print(f"save finalresult to {save_metadata_path}")
+            json.dump(all_caption, f)
         print(f"processing time:{time.time()-start_time}")
 
 
