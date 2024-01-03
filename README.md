@@ -73,3 +73,8 @@ cpu data root：/data/zip_cloud/
 从cpu copy到v100走内网ip大概200兆s： v100s003: 192.168.0.224，cpu001: 192.168.0.190
 cpu to v100: scp -P 65022 /data/shared_zipdata/video_dataset_x user@192.168.0.224:/data/zip_cloud/
 ```
+清洗脚本
+```
+python SceneCut.py --vid_dir /data/shared_zipdata/group_1 --out_dir /data/shared_zipdata/group_1_clips/ --num_process 60
+python -m torch.distributed.launch --nproc_per_node=8 lvm_datapipe/coca.py --video_path /home/xiaowei/lvm_datapipe/group_1_mini_clips  --world_size 8 --batch_size 20 --num_workers 4
+```
