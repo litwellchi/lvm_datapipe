@@ -80,7 +80,7 @@ class MetadataDict:
         self.metadata["basic"]["video_resolution"] = get_video_resolution(video_path)
         self.metadata["basic"]["video_fps"] = scenes[0][0].get_framerate()
         self.metadata["basic"]["clip_id"] = f'{video_id}_{"%07d" % index}'
-        self.metadata["basic"]["clip_path"] = f"{os.path.basename(out_dir)}/{self.metadata['basic']['clip_id']}.mp4"        # TODO: no dirname
+        self.metadata["basic"]["clip_path"] = f"{self.metadata['basic']['clip_id']}.mp4"
         self.metadata["basic"]["clip_duration"] = (scene[1] - scene[0]).get_seconds()
         self.metadata["basic"]["clip_start_end_idx"] = [scene[0].get_frames(), scene[1].get_frames()]
         self.metadata["basic"]["optimal_score"] = optimal_score
@@ -276,8 +276,7 @@ def run__process(vid_dir, out_dir, num_process):
         line = oj.readlines()
         out = line[0][:-2] + ' ]'
     with open(out_json_path, 'w') as oj:
-        oj.write(out)
-
+        json.dump(json.loads(out), oj)
 
 
 if __name__ == "__main__":
