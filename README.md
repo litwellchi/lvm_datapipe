@@ -75,6 +75,6 @@ cpu to v100: scp -P 65022 /data/shared_zipdata/video_dataset_x user@192.168.0.22
 ```
 清洗脚本
 ```
-python SceneCut.py --vid_dir /data/shared_zipdata/group_1 --out_dir /data/shared_zipdata/video_dataset_0/ --num_process 60
+python SceneCut.py --vid_dir /data/shared_zipdata/group_{} --out_dir /data/shared_zipdata/video_dataset_{}/ --num_process 60
 python -m torch.distributed.launch --nproc_per_node=8 lvm_datapipe/coca.py --video_path /home/xiaowei/lvm_datapipe/group_1_mini_clips  --world_size 8 --batch_size 20 --num_workers 4
 ```
