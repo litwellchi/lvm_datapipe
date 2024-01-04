@@ -276,7 +276,8 @@ def run__process(vid_dir, out_dir, num_process):
         line = oj.readlines()
         out = line[0][:-2] + ' ]'
     with open(out_json_path, 'w') as oj:
-        json.dump(json.loads(out), oj)
+        oj.write(out)
+
 
 
 if __name__ == "__main__":
@@ -287,3 +288,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run__process(args.vid_dir, args.out_dir, int(args.num_process))
+    out_json_path = os.path.join(args.out_dir, 'metadata.json')
+    with open(out_json_path, 'r') as oj:
+        line = oj.readlines()
+        out = line[0][:-2] + ' ]'
+    with open(out_json_path, 'w') as oj:
+        json.dump(json.loads(out), oj)
