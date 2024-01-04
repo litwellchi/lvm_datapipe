@@ -208,7 +208,7 @@ def main(vid_dir, out_dir, file_list):
                                            f"{out_dir}/{metadata.get_value('basic', 'clip_id')}.mp4")
 
                         output_metadata = json.dumps(metadata.to_dict())
-                        out_file.write(output_metadata + ',\n')
+                        out_file.write(output_metadata + ', ')
             except subprocess.CalledProcessError as e:
                 print("FFmpeg error: ", e.stderr, " :  ", vid_path)
                 continue
@@ -276,8 +276,7 @@ def run__process(vid_dir, out_dir, num_process):
         line = oj.readlines()
         out = line[0][:-2] + ' ]'
     with open(out_json_path, 'w') as oj:
-        oj.write(out)
-
+        json.dump(json.loads(out), oj)
 
 
 if __name__ == "__main__":
@@ -288,9 +287,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run__process(args.vid_dir, args.out_dir, int(args.num_process))
-    out_json_path = os.path.join(args.out_dir, 'metadata.json')
-    with open(out_json_path, 'r') as oj:
-        line = oj.readlines()
-        out = line[0][:-2] + ' ]'
-    with open(out_json_path, 'w') as oj:
-        json.dump(json.loads(out), oj)
