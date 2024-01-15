@@ -86,17 +86,21 @@ def main(args):
     start_time = time.time()
     sub_metadata_list=[]
     for batch_frame, idx in tqdm.tqdm(dataloader):
-        batch_frame = batch_frame.view(-1, *batch_frame.shape[2:]).to(args.local_rank)
-        with torch.no_grad(), torch.cuda.amp.autocast():
-            generated = model.module.generate(batch_frame)
+        try:
+            batch_frame = batch_frame.view(-1, *batch_frame.shape[2:]).to(args.local_rank)
+            with torch.no_grad(), torch.cuda.amp.autocast():
+                generated = model.module.generate(batch_frame)
 
-        generated = generated.view(-1, args.num_frames, generated.shape[-1])
+            generated = generated.view(-1, args.num_frames, generated.shape[-1])
 
-        for count in range(idx.shape[0]):
-            result_list = [open_clip.decode(generated[count][i]).split("<end_of_text>")[0].replace("<start_of_text>", "") for i in
-                           range(args.num_frames)]
-            metadata_list[idx[count]]['misc']['frame_caption'] = result_list
-            sub_metadata_list.append(metadata_list[idx[count]])
+            for count in range(idx.shape[0]):
+                result_list = [open_clip.decode(generated[count][i]).split("<end_of_text>")[0].replace("<start_of_text>", "") for i in
+                               range(args.num_frames)]
+                metadata_list[idx[count]]['misc']['frame_caption'] = result_list
+                sub_metadata_list.append(metadata_list[idx[count]])
+        except Exception as e:
+            print("An error occurred:", str(e))
+            continue
 
     # 
     save_metadata_path = metadata_path.replace('metadata', f'metadata_catpion_{args.local_rank}')
