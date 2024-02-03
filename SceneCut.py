@@ -249,7 +249,7 @@ def run__process(vid_dir, out_dir, num_process):
     if len(finished_list) > 0:
         with open(out_json_path, 'r') as oj:
             line = oj.readlines()
-            out = line[0][:-2]+line[0][-2:].replace(']', '')
+            out = line[0][:-2]+line[0][-2:].replace(']', ', ')
         with open(out_json_path, 'w') as oj:
             oj.write(out)
     else:
