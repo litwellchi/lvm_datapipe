@@ -6,7 +6,6 @@ import torch
 import argparse
 import tqdm
 from PIL import Image
-import open_clip
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 import yaml
@@ -55,7 +54,17 @@ class MACCaptionDataset(Dataset):
 
     def __getitem__(self, idx):
         # return path, caption_list ...
-        return  self.videos
+        item = self.videos[idx]
+        try:
+            path = item['basic']['clip_path']
+            frame_caption = item['misc']['frame_caption']
+            caption=''
+            for fc in frame_caption: caption=caption+fc
+
+        except:
+            path=''
+            caption=''
+        return caption,path,idx
 
     def _make_dataset(self):
         with open(self.data_root, 'r') as f:
@@ -68,7 +77,6 @@ class MACCaptionDataset(Dataset):
             with open(metadata_path, 'r') as f:
                 videos = json.load(f)
                 for item in videos:
-                    if item['basic']["clip_duration"] < self.clip_length: continue
                     item['basic']['clip_path'] = os.path.join(meta_path,item['basic']['clip_path'])
                     self.videos.append(item)
         print(f'Number of videos = {len(self.videos)}')
