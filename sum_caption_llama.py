@@ -7,24 +7,19 @@ import os
 import re
 import json
 import transformers
+from torch.utils.data.distributed import DistributedSampler
+from MACVDataset import MACCaptionDataset
+from torch.utils.data import Dataset, DataLoader
 from transformers import LlamaForCausalLM, LlamaTokenizer
 from torch.nn.parallel import DistributedDataParallel as DDP
-
-random.seed(12) 
-np.random.seed(12)
-torch.manual_seed(12)
-torch.cuda.manual_seed(12)
-torch.cuda.manual_seed_all(12)
-
-
+import tqdm
 
 
 def get_parser():
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
     parser.add_argument('--hf_key', default='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', help='hf access tokens for loading llama')
-    parser.add_argument('--video_path', default='freeguy_test', help='Path to the video folder')
-    parser.add_argument('--metadata_path', default='metadata.json', help='metadata file name. Please keep in form of metadata_{}.json')
-    parser.add_argument('--num_frames', default=3, help='number of frames extract from one clip video')
+    parser.add_argument('--metadata_path', default='configs/meta_config.yaml', help='metadata file name. Please keep in form of metadata_{}.json')
+    parser.add_argument('--seed', default=12, help='random seed')
     parser.add_argument('--batch_size', default=8, type=int, help='inference batch size')
     parser.add_argument('--llama_path', default='meta-llama/Llama-2-13b-chat-hf', help='Path to the llama weight file, or just llama hard code of huggingface')
     parser.add_argument('--gpus', default='0,1,2,3,4,5,6,7', help='devices')
@@ -51,19 +46,21 @@ def get_wordlist(strs):
     return answer
 
 def main(args):
+    random.seed(args.seed) 
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+
     torch.cuda.set_device(args.local_rank)
     torch.distributed.init_process_group(backend='nccl', init_method='env://')
 
-    metadata_path = os.path.join(args.video_path, args.metadata_path)
-    save_metadata_path = metadata_path.replace('metadata', 'metadata_catpion')
-    with open(metadata_path, 'r') as f:
-        metadata_list = json.load(f)
-    
-    # TODO
-    # rough filtered_list
-    metadata_list = [item for item in metadata_list if item['basic']["clip_duration"] > 1.0]
-    
     # Dataloader
+
+    dataset = MACCaptionDataset(args.metadata_path)
+    sampler = DistributedSampler(dataset, num_replicas=args.world_size, rank=args.local_rank)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers)
+    start_time = time.time()
 
 
     #Load model
@@ -77,6 +74,10 @@ def main(args):
                                     )
     
     # Inference 
+
+    for batch_frame, idx in tqdm.tqdm(dataloader):
+        pass
+
     captions ="a light blue background with squares in the middle of it . a blue background with squares and squares and squares with the words  it is strongly believed to enforce rape written on top of it . a person standing in front of a fence with a text ."
     # captions ="a chain hanging from a metal chain next to a blue blanket . a chain hanging from a metal object . a close - up of a chain hanging on a wall ."
     # model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
