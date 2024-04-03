@@ -6,10 +6,9 @@ import torch
 import argparse
 import tqdm
 from PIL import Image
-import open_clip
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
-
+import yaml
 
 class MACVDataset(Dataset):
     def __init__(self, metadata_list, video_path, num_frames, transform):
@@ -41,3 +40,43 @@ class MACVDataset(Dataset):
             return frame_list
         except:
             raise Exception(f"Failed to open video file {clip_path}.")
+
+
+class MACCaptionDataset(Dataset):
+    def __init__(self,
+                 data_root
+                 ):
+        self.data_root = data_root
+        self._make_dataset()
+    def __len__(self):
+
+        return len(self.videos)
+
+    def __getitem__(self, idx):
+        # return path, caption_list ...
+        item = self.videos[idx]
+        try:
+            path = item['basic']['clip_path']
+            frame_caption = item['misc']['frame_caption']
+            caption=''
+            for fc in frame_caption: caption=caption+fc
+
+        except:
+            path=''
+            caption=''
+        return caption,path,idx
+
+    def _make_dataset(self):
+        with open(self.data_root, 'r') as f:
+            self.config = yaml.load(f, Loader=yaml.FullLoader)
+        print("DATASET CONFIG:")
+        print(self.config)
+        self.videos = []
+        for meta_path in self.config['META']:
+            metadata_path = os.path.join(meta_path,'metadata_catpion.json')
+            with open(metadata_path, 'r') as f:
+                videos = json.load(f)
+                for item in videos:
+                    item['basic']['clip_path'] = os.path.join(meta_path,item['basic']['clip_path'])
+                    self.videos.append(item)
+        print(f'Number of videos = {len(self.videos)}')
