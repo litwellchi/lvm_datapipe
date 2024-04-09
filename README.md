@@ -65,10 +65,17 @@ Please structure the dataset as follows:
 For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
 
 ## Running
+### Environment setup
+```
+pip install -r requirements.txt
+```
 
-清洗脚本
+### SceneCut.py
 ```
 python SceneCut.py --vid_dir /data/shared_zipdata/group_{} --out_dir /data/shared_zipdata/video_dataset_{}/ --num_process 60
+```
+### coca.py
+```
 python -m torch.distributed.launch --nproc_per_node=8 lvm_datapipe/coca.py --video_path /home/xiaowei/lvm_datapipe/group_1_mini_clips  --world_size 8 --batch_size 20 --num_workers 4
 ```
 ### Running OFScore_with_v2d.py
@@ -84,4 +91,8 @@ out_path: {vid_dir}_of/OFresult.json
 work_dir: ffmpeg-6.1.1/
 bash run_extract_mvs.sh 
 out_path: {vid_dir}_of/mvs_scores.txt
+```
+### result analysis & visualization of Pie Graph
+```
+python analyze_vids.py 
 ```
