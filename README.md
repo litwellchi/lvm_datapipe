@@ -1,10 +1,15 @@
 data pipeline code of large video generation model
 ## Notification
-代码都还在初步阶段，请把运行脚本和代码push上来。后续再继续维护模块化。
-```
-scene cut:@yatian
-Textcaption:@aosong
-```
+- [ ] code format check 
+- [ ] data loader consistency 
+- [x] Code review
+- [x] optical flow
+- [x] aesthetics score
+- [x] llava caption
+- [x] llama2 caption summary
+- [x] scence cut
+- [x] metadata format
+
 ## Metadata formats
 For each clip, it should have one json format metadata.
 ```
@@ -59,20 +64,8 @@ Please structure the dataset as follows:
 ```
 For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
 
-## Storage Position
-盐城算力集群公网ip：
-```
-V100s:36.133.54.47 -p 65022
-gpu:/data/shared_zipdata/
-cpu:36.138.58.171 -p 65022
-cpu data root：/data/zip_cloud/
+## Running
 
-```
-内网拷贝
-```
-从cpu copy到v100走内网ip大概200兆s： v100s003: 192.168.0.224，cpu001: 192.168.0.190
-cpu to v100: scp -P 65022 /data/shared_zipdata/video_dataset_x user@192.168.0.224:/data/zip_cloud/
-```
 清洗脚本
 ```
 python SceneCut.py --vid_dir /data/shared_zipdata/group_{} --out_dir /data/shared_zipdata/video_dataset_{}/ --num_process 60
