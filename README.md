@@ -2,6 +2,7 @@ data pipeline code of large video generation model
 ## Notification
 - [ ] code format check 
 - [ ] data loader consistency 
+- [ ] OCR 
 - [x] Code review
 - [x] optical flow
 - [x] aesthetics score
