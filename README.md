@@ -77,4 +77,12 @@ cpu to v100: scp -P 65022 /data/shared_zipdata/video_dataset_x user@192.168.0.22
 ```
 python SceneCut.py --vid_dir /data/shared_zipdata/group_{} --out_dir /data/shared_zipdata/video_dataset_{}/ --num_process 60
 python -m torch.distributed.launch --nproc_per_node=8 lvm_datapipe/coca.py --video_path /home/xiaowei/lvm_datapipe/group_1_mini_clips  --world_size 8 --batch_size 20 --num_workers 4
+python -m torch.distributed.launch --nproc_per_node=8 aesthetic_score.py --world_size 8
 ```
+# llava
+```
+git clone https://github.com/haotian-liu/LLaVA.git
+mv LLaVA llava
+python -m torch.distributed.launch --nproc_per_node=7 llava_caption.py
+```
+
