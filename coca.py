@@ -33,7 +33,7 @@ class VideoDataset(Dataset):
         batch_frame = torch.cat(trans_frames, dim=0)
         return batch_frame, idx
 
-    def getImageFromVideo(self, clip_path, num_frames=3):
+    def getImageFromVideo(self, clip_path, num_frames):
         try:
             cap = cv2.VideoCapture(clip_path)
             frame_list = []
@@ -96,6 +96,7 @@ def main(args):
             for count in range(idx.shape[0]):
                 result_list = [open_clip.decode(generated[count][i]).split("<end_of_text>")[0].replace("<start_of_text>", "") for i in
                                range(args.num_frames)]
+                print(idx,count,idx[count],metadata_list[idx[count]])
                 metadata_list[idx[count]]['misc']['frame_caption'] = result_list
                 sub_metadata_list.append(metadata_list[idx[count]])
         except Exception as e:

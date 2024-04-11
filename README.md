@@ -1,10 +1,16 @@
 data pipeline code of large video generation model
 ## Notification
-代码都还在初步阶段，请把运行脚本和代码push上来。后续再继续维护模块化。
-```
-scene cut:@yatian
-Textcaption:@aosong
-```
+- [ ] code format check 
+- [ ] data loader consistency 
+- [ ] OCR 
+- [x] Code review
+- [x] optical flow
+- [x] aesthetics score
+- [x] llava caption
+- [x] llama2 caption summary
+- [x] scence cut
+- [x] metadata format
+
 ## Metadata formats
 For each clip, it should have one json format metadata.
 ```
@@ -59,30 +65,43 @@ Please structure the dataset as follows:
 ```
 For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
 
-## Storage Position
-盐城算力集群公网ip：
+## Running
+### Environment setup
 ```
-V100s:36.133.54.47 -p 65022
-gpu:/data/shared_zipdata/
-cpu:36.138.58.171 -p 65022
-cpu data root：/data/zip_cloud/
+pip install -r requirements.txt
+```
 
-```
-内网拷贝
-```
-从cpu copy到v100走内网ip大概200兆s： v100s003: 192.168.0.224，cpu001: 192.168.0.190
-cpu to v100: scp -P 65022 /data/shared_zipdata/video_dataset_x user@192.168.0.224:/data/zip_cloud/
-```
-清洗脚本
+### SceneCut.py
 ```
 python SceneCut.py --vid_dir /data/shared_zipdata/group_{} --out_dir /data/shared_zipdata/video_dataset_{}/ --num_process 60
+```
+### coca.py
+```
 python -m torch.distributed.launch --nproc_per_node=8 lvm_datapipe/coca.py --video_path /home/xiaowei/lvm_datapipe/group_1_mini_clips  --world_size 8 --batch_size 20 --num_workers 4
 python -m torch.distributed.launch --nproc_per_node=8 aesthetic_score.py --world_size 8
 ```
+### Running OFScore_with_v2d.py
+previous steps: `conda activate vid`
+ 1. OF:
+```
+work_dir: lvm_datapipe/
+python OFScore_with_v2d.py --input_folder {vid_dir} --output_folder {vid_dir}_of
+out_path: {vid_dir}_of/OFresult.json
+```
+2. MVS:
+```
+work_dir: ffmpeg-6.1.1/
+bash run_extract_mvs.sh 
+out_path: {vid_dir}_of/mvs_scores.txt
+```
+### result analysis & visualization of Pie Graph
+```
+python analyze_vids.py 
+```
+
 # llava
 ```
 git clone https://github.com/haotian-liu/LLaVA.git
 mv LLaVA llava
 python -m torch.distributed.launch --nproc_per_node=7 llava_caption.py
 ```
-
