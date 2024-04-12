@@ -1,3 +1,8 @@
+"""
+TODO: data format consistance
+
+"""
+
 import os
 import argparse
 import json

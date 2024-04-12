@@ -1,3 +1,9 @@
+"""
+Check the scene cut results
+1. scene numbers = metadata numbers
+"""
+
+
 import os
 import json
 import sys

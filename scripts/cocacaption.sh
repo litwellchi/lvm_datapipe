@@ -1,0 +1,1 @@
+# Loading the coca/open_clip_pytorch_model.bin first

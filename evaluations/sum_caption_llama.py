@@ -85,7 +85,7 @@ def main(args):
     pipeline = transformers.pipeline("text-generation", 
                                     model=model,
                                     tokenizer=tokenizer,                                 
-                                    torch_dtype=torch.float16, 
+                                    torch_dtype=torch.int8, 
                                     device = torch.device('cuda', index=0)
                                     )
     
