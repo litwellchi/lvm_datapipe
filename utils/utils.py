@@ -70,3 +70,20 @@ def instantiate_from_config(config):
         raise KeyError("Expected key `target` to instantiate.")
 
     return get_obj_from_str(config["target"])(**config.get("params", dict()))
+
+def collect_metadata(remove_captions_folder=False):
+    # TODO captions/video_dataset_0 --> captions/all/video_dataset_0.json
+    # 
+    pass
+
+def sort_metadata():
+    # TODO captions/all/video_dataset_0.json --> captions/video_dataset_0
+    pass
+
+def load_info(metadata, filename, key):
+    """"
+    find metadata/video_dataset_x/metasadg.json
+    if no metasadg.json: 跑完存进去
+    if key in metasadg.json: 跑过了，跳过
+    else: 跑完之后加进去再存进去
+    """

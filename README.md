@@ -12,14 +12,16 @@ data pipeline code of large video generation model
 - [x] scence cut
 - [x] metadata format
 ## Developer notification
+```
+TODOs:
 data_schema 里面放各种数据格式相关的文件，包括dataloader登
-evaluations 里放method的脚本（定义好各种arxiv，必须要有的输入为metadata路径，输出路径）
+evaluations 里放method的脚本（定义好各种arxiv，必须要有的输入统一为all/metadata.json路径或者caption/*.json，输出路径all/metadata.json）；
 models 里为各个方法潜在的git clone的模型，请都把路径写到这个底下
 scripts 包括了怎么跑起来单个脚本的完整sh，从环境配置，到run
-utils里是各种读写等基本操作
+utils里是各种读写等基本操作；在utils里加入检查metadata和已经跑过的断电重启的function
 main.py将会集成成一个统一调度的文件
 望周知
-
+```
 ## Metadata formats
 For each clip, it should have one json format metadata.
 ```

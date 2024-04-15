@@ -11,30 +11,22 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 from PIL import Image
-import io
-import matplotlib.pyplot as plt
 import os
 import json
-
-from warnings import filterwarnings
-
-
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"    # choose GPU if you are on a multi GPU server
 import numpy as np
 import torch
 import pytorch_lightning as pl
 import torch.nn as nn
-from torchvision import datasets, transforms
 import tqdm
-import pandas as pd
 from torch.utils.data import Dataset, DataLoader
 import json
+import torch.nn.functional as F
 
 import clip
 import time
 
 
-from PIL import Image, ImageFile
+from PIL import Image
 import cv2
 
 
@@ -105,6 +97,7 @@ class VideoDataset(Dataset):
 
     def __getitem__(self, idx):
         metadata = self.metadata_list[idx]
+        # TODO config the datapath
         clip_path = os.path.join(self.video_path, f'video_dataset_85/{metadata["basic"]["clip_path"]}')
         frames = self.getImageFromVideo(clip_path, points=[0.2,0.5,0.8])
         if frames == None: return None,idx
@@ -149,7 +142,7 @@ def main(args):
 
 
     model = MLP(768)  # CLIP embedding dim is 768 for CLIP ViT L 14
-    s = torch.load("/aifs4su/mmcode/videogen/cas/improved-aesthetic-predictor/ava+logos-l14-linearMSE.pth")   # load the model you trained previously or the model available in this repo
+    s = torch.load("./model/improved-aesthetic-predictor/ava+logos-l14-linearMSE.pth")   # load the model you trained previously or the model available in this repo
     model.load_state_dict(s)
 
 
@@ -191,6 +184,7 @@ def main(args):
         json.dump(sub_metadata_list, f,indent=4)
 
     dist.barrier()
+# TODO 改成一个一个json 保存；
     if args.local_rank == 0:
         all_caption = []
         for i in range(args.world_size):
@@ -202,6 +196,7 @@ def main(args):
         print(f"processing time:{time.time()-start_time}")
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
     parser.add_argument('--video_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/', help='Path to the video folder')
@@ -211,7 +206,7 @@ if __name__ == "__main__":
     parser.add_argument('--local-rank', default=0, type=int, help='Local rank for distributed training')
     parser.add_argument('--world_size', default=6, type=int, help='Number of GPUs for distributed training')
     parser.add_argument('--num_workers', default=4, type=int, help='Number of cpu workers for dataloader')
-    parser.add_argument('--gpu_ids', default='0,1,2,3,5,6,7', help='devices')
+    parser.add_argument('--gpu_ids', default='0', help='devices')
 
     args = parser.parse_args()
 

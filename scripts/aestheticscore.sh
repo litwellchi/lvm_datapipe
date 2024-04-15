@@ -1,0 +1,1 @@
+wget https://github.com/christophschuhmann/improved-aesthetic-predictor/raw/main/sac+logos+ava1-l14-linearMSE.pth -o ./model/sac+logos+ava1-l14-linearMSE.pth
