@@ -63,16 +63,26 @@ For each clip, it should have one json format metadata.
 ## file structure
 Please structure the dataset as follows:
 ```
-|video_dataset_0
-    |clip1.mp4
-    |clip2.mp4
-    |...
-    |metadata.json
- |video_dataset_1
-    |clip1.mp4
-    |clip2.mp4
-    |...
-    |metadata.json
+Dataset format
+-macvid
+    --video
+        -- video_dataset_0
+        -- video_dataset_1
+        -- video_dataset_x
+    --metadata
+        -- all
+            -- video_dataset_0.json 
+            -- video_dataset_1.json 
+            -- video_dataset_2.json 
+        -- video_dataset_0 #one json for one clip
+            -- clipidxaasd.json
+            -- clipidasd2e.json
+        -- video_dataset_1
+            -- clipidxaasd.json
+            -- clipidasd2e.json
+        -- video_dataset_x  
+            -- clipidxaasd.json
+            -- clipidasd2e.json
 ```
 For each `video_dataset_x` folder, it should contain at most 1 million clips, and less than 1Tb file size after compression.
 
