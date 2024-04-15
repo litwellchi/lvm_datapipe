@@ -1,138 +1,168 @@
-"""
-2024.4.12 Aborted.
-Data format update:
-
-"""
-
-
-from typing import List, Tuple, Any, Union
 import os
+import torch
 import json
-import subprocess
+import random
+from torch.utils.data import Dataset
+from decord import VideoReader, cpu
+from torch.utils.data import Dataset, DataLoader
+import yaml
 
-# Standard PySceneDetect imports:
-from scenedetect.frame_timecode import FrameTimecode
 
+metadata = {
+    "basic": {
+        "video_id": "",                 # Type: str - clip belongs to which video
+        "video_path": "",               # Type: str - source video path
+        "video_duration": 0.0,          # Type: float (seconds)
+        "video_resolution": [],         # Type: list [height, width]
+        "video_fps": 0.0,                 # Type: float
+        "clip_id": "",                  # Type: str
+        "clip_path": "",                # Type: str
+        "clip_duration": 0.0,           # Type: float (seconds)
+        "clip_start_end_idx": [0, 0],   # Type: list [int, int] - start and end frame indices in the source video (count from 0)
+        "optimal_score": 0.0            # Type: float
+    },
+    "scene": {
+        "captions": "",                 # Type: str - describes the content of the video clip
+        "place": "",                    # Type: str - keyword descriptions for the place
+        "background": "",               # Type: str - keyword descriptions for the background
+        "style": "",                    # Type: str - keyword descriptions for the style
+        "num_of_objects": 0,            # Type: int
+        "objects": [                    # Type: list - length is equal to num_of_objects
+            {
+                "category": "",         # Type: str - noun: human, dog, etc.
+                "action": "",           # Type: str - verb: run, dance, play guitar, etc.
+                "action_speed": ""      # Type: str - very slow/slow/medium/fast/very fast
+            }
+        ]
+    },
+    "camera": {
+        "view_scale": "",               # Type: str - long shot/full shot/medium shot/close-up shot/extreme close-up shot
+        "movement": "",                 # Type: str - static shot, pans and tilts shot, zoom in/zoom out/zoom in and zoom out
+        "speed": ""                     # Type: str - very slow/slow/medium/fast/very fast
+    },
+    "misc": {}                          # Type: dict - additional miscellaneous metadata
+}
 
-class MetadataDict():
-    def __init__(self):
-        self.metadata = {
-            "basic": {
-                "video_id": "",                 # Type: str - clip belongs to which video
-                "video_path": "",               # Type: str - source video path
-                "video_duration": 0.0,          # Type: float (seconds)
-                "video_resolution": [],         # Type: list [height, width]
-                "video_fps": 0.0,                 # Type: float
-                "clip_id": "",                  # Type: str
-                "clip_path": "",                # Type: str
-                "clip_duration": 0.0,           # Type: float (seconds)
-                "clip_start_end_idx": [0, 0],   # Type: list [int, int] - start and end frame indices in the source video (count from 0)
-                "optimal_score": 0.0            # Type: float
-            },
-            "scene": {
-                "captions": "",                 # Type: str - describes the content of the video clip
-                "place": "",                    # Type: str - keyword descriptions for the place
-                "background": "",               # Type: str - keyword descriptions for the background
-                "style": "",                    # Type: str - keyword descriptions for the style
-                "num_of_objects": 0,            # Type: int
-                "objects": [                    # Type: list - length is equal to num_of_objects
-                    {
-                        "category": "",         # Type: str - noun: human, dog, etc.
-                        "action": "",           # Type: str - verb: run, dance, play guitar, etc.
-                        "action_speed": ""      # Type: str - very slow/slow/medium/fast/very fast
-                    }
-                ]
-            },
-            "camera": {
-                "view_scale": "",               # Type: str - long shot/full shot/medium shot/close-up shot/extreme close-up shot
-                "movement": "",                 # Type: str - static shot, pans and tilts shot, zoom in/zoom out/zoom in and zoom out
-                "speed": ""                     # Type: str - very slow/slow/medium/fast/very fast
-            },
-            "misc": {}                          # Type: dict - additional miscellaneous metadata
-        }
+def merged_metadata(metadata_path):
+    """
+    captions/video_dataset_0 --> captions/all/video_dataset_0.json
+    """
+    video_path = metadata_path.replace('.json','').replace('metadata/all','videos')
+    metadata_folder = video_path.replace("videos","metadata")
+    merged_data = []
+    for filename in os.listdir(metadata_folder):
+        if filename.endswith('.json'):
+            file_path = os.path.join(metadata_folder, filename)
+            with open(file_path, 'r') as file:
+                json_data = json.load(file)
+                merged_data.append(json_data)
+    with open(metadata_path, 'w') as file:
+        json.dump(merged_data, file)
+    
+def sort_metadata(metadata_path):
+    """
+    captions/all/video_dataset_0.json --> captions/video_dataset_0
+    """
+    video_path = metadata_path.replace('.json','').replace('metadata/all','videos')
+    metadata_folder = video_path.replace("videos","metadata")
+    with open(metadata_path, 'r') as file:
+        json_data = json.load(file)
+    
+    os.makedirs(metadata_folder, exist_ok=True)
 
-    def set_basic_info(self, index: int, video_id: str, video_path: str, scenes: List[List[FrameTimecode]],
-                       out_dir: str, optimal_score: float = None):
-        scene = scenes[index]
-        self.metadata["basic"]["video_id"] = video_id
-        self.metadata["basic"]["video_path"] = os.path.join(os.path.basename(os.path.dirname(video_path)), os.path.basename(video_path))
-        self.metadata["basic"]["video_duration"] = scenes[-1][1].get_seconds()
-        self.metadata["basic"]["video_resolution"] = get_video_resolution(video_path)
-        self.metadata["basic"]["video_fps"] = scenes[0][0].get_framerate()
-        self.metadata["basic"]["clip_id"] = f'{video_id}_{"%07d" % index}'
-        self.metadata["basic"]["clip_path"] = f"{self.metadata['basic']['clip_id']}.mp4"
-        self.metadata["basic"]["clip_duration"] = (scene[1] - scene[0]).get_seconds()
-        self.metadata["basic"]["clip_start_end_idx"] = [scene[0].get_frames(), scene[1].get_frames()]
-        self.metadata["basic"]["optimal_score"] = optimal_score
+    for i, data in enumerate(json_data):
+        output_file = os.path.join(metadata_folder, f'{data['basic']['clip_id']}.json')
+        with open(output_file, 'w') as file:
+            json.dump(data, file)
+    
+class MaCVid(Dataset):
+    """
+    Dataset format: 
+    -- macvid_dataset
+        -- videos
+            -- video_dataset_0
+            -- video_dataset_1
+            -- video_dataset_x
+        -- metadata
+            -- all
+                -- video_dataset_0.json 
+                -- video_dataset_1.json 
+                -- video_dataset_2.json 
+            -- video_dataset_0 #one json for one clip
+                -- clipidxaasd.json
+                -- clipidasd2e.json
+            -- video_dataset_1
+                -- clipidxaasd.json
+                -- clipidasd2e.json
+            -- video_dataset_x  
+                -- clipidxaasd.json
+                -- clipidasd2e.json
+    """
+    def __init__(self,
+                 yaml_path,
+                 resolution,
+                 video_length,
+                 frame_stride=4,
+                 clip_length=1.0
+                 ):
+        self.yaml_path = yaml_path
+        self.resolution = resolution
+        self.video_length = video_length
+        self.frame_stride = frame_stride
+        self.clip_length = clip_length
 
-    def _set_basic_info(self, video_id: str, video_path: str, video_duration: float,
-                       video_resolution: List[int], video_fps: int, clip_id: str,
-                       clip_path: str, clip_duration: float, clip_start_end_idx: List[int],
-                       optimal_score: float):
-        self.metadata["basic"]["video_id"] = video_id
-        self.metadata["basic"]["video_path"] = video_path
-        self.metadata["basic"]["video_duration"] = video_duration
-        self.metadata["basic"]["video_resolution"] = video_resolution
-        self.metadata["basic"]["video_fps"] = video_fps
-        self.metadata["basic"]["clip_id"] = clip_id
-        self.metadata["basic"]["clip_path"] = clip_path
-        self.metadata["basic"]["clip_duration"] = clip_duration
-        self.metadata["basic"]["clip_start_end_idx"] = clip_start_end_idx
-        self.metadata["basic"]["optimal_score"] = optimal_score
+        if isinstance(self.resolution, int):
+            self.resolution = [self.resolution, self.resolution]
+        assert(isinstance(self.resolution, list) and len(self.resolution) == 2)
 
-    def set_scene_info(self, captions: str, place: str, background: str, style: str,
-                       num_of_objects: int, objects: List[dict]):
-        self.metadata["scene"]["captions"] = captions
-        self.metadata["scene"]["place"] = place
-        self.metadata["scene"]["background"] = background
-        self.metadata["scene"]["style"] = style
-        self.metadata["scene"]["num_of_objects"] = num_of_objects
-        self.metadata["scene"]["objects"] = objects
+        self._make_dataset()
+    
+    def _make_dataset(self):
+        with open(self.yaml_path, 'r') as f:
+            self.config = yaml.load(f, Loader=yaml.FullLoader)
+        print("DATASET CONFIG:")
+        print(self.config)
+        self.videos = []
+        self.data_root = self.config['data_root']
+        for meta_path in self.config['META']:
+            with open(meta_path, 'r') as f:
+                videos = json.load(f)
+                for item in videos:
+                    # TODO conditions
+                    self.videos.append(item)
+                
+        print(f'Number of videos = {len(self.videos)}')
 
-    def set_camera_info(self, view_scale: str, movement: str, speed: str):
-        self.metadata["camera"]["view_scale"] = view_scale
-        self.metadata["camera"]["movement"] = movement
-        self.metadata["camera"]["speed"] = speed
-
-    def set_misc_info(self, misc_info: dict):
-        self.metadata["misc"] = misc_info
-
-    def load_from_dict(self, metadata_dict: dict):
-        if "basic" in metadata_dict:
-            self._set_basic_info(**metadata_dict["basic"])
-        if "scene" in metadata_dict:
+    def __getitem__(self, index):
+        while True:
+            video_path = os.path.join(self.data_root, self.videos[index]['basic']['clip_path'])
             try:
-                self.set_scene_info(**metadata_dict["scene"])
+                video_reader = VideoReader(video_path, ctx=cpu(0), width=self.resolution[1], height=self.resolution[0])
+                if len(video_reader) < self.video_length:
+                    index += 1
+                    continue
+                else:
+                    break
             except:
-                self.set_scene_info('', '', '', '', 0, [])
-        if "camera" in metadata_dict:
-            try:
-                self.set_camera_info(**metadata_dict["camera"])
-            except:
-                self.set_camera_info('', '', '')
-        if "misc" in metadata_dict:
-            try:
-                self.set_misc_info(metadata_dict["misc"])
-            except:
-                self.set_misc_info({})
+                index += 1
+                print(f"Load video failed! path = {video_path}")
+                return self.__getitem__(index)
+    
+        all_frames = list(range(0, len(video_reader), self.frame_stride))
+        if len(all_frames) < self.video_length:
+            all_frames = list(range(0, len(video_reader), 1))
 
+        # select random clip
+        rand_idx = random.randint(0, len(all_frames) - self.video_length)
+        frame_indices = list(range(rand_idx, rand_idx+self.video_length))
+        frames = video_reader.get_batch(frame_indices)
+        assert(frames.shape[0] == self.video_length),f'{len(frames)}, self.video_length={self.video_length}'
 
-    def get_metadata(self):
-        return self.metadata
-
-    def get_value(self, section: str, key: str) -> Any:
-        if section in self.metadata and key in self.metadata[section]:
-            return self.metadata[section][key]
-        else:
-            return None
-
-    def update_value(self, section: str, key: str, value: Union[str, int, float, List[Any], dict]) -> bool:
-        if section in self.metadata and key in self.metadata[section]:
-            self.metadata[section][key] = value
-            return True
-        else:
-            return False
-
-    def to_dict(self) -> dict:
-        return self.metadata
-
+        frames = torch.tensor(frames.asnumpy()).permute(3, 0, 1, 2).float() # [t,h,w,c] -> [c,t,h,w]
+        assert(frames.shape[2] == self.resolution[0] and frames.shape[3] == self.resolution[1]), f'frames={frames.shape}, self.resolution={self.resolution}'
+        frames = (frames / 255 - 0.5) * 2
+        data = {'video': frames, 'caption':self.videos[index]["misc"]['frame_caption'][0]}
+        return data
+    
+    def __len__(self):
+        return len(self.videos)

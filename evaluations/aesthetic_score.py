@@ -29,7 +29,6 @@ import time
 from PIL import Image
 import cv2
 
-
 #####  This script will predict the aesthetic score for this image file:
 start_time = time.time()
 
@@ -98,7 +97,7 @@ class VideoDataset(Dataset):
     def __getitem__(self, idx):
         metadata = self.metadata_list[idx]
         # TODO config the datapath
-        clip_path = os.path.join(self.video_path, f'video_dataset_85/{metadata["basic"]["clip_path"]}')
+        clip_path = os.path.join(self.video_path, f'{metadata["basic"]["clip_path"]}')
         frames = self.getImageFromVideo(clip_path, points=[0.2,0.5,0.8])
         if frames == None: return None,idx
         batch_frame = []
@@ -136,10 +135,6 @@ def main(args):
     metadata_path = os.path.join(args.video_path, args.metadata_path)
     with open(metadata_path, 'r') as f:
         metadata_list = json.load(f)
-    # TODO
-    # rough filtered_list
-    metadata_list = [item for item in metadata_list if item['basic']["clip_duration"] > 1.0]
-
 
     model = MLP(768)  # CLIP embedding dim is 768 for CLIP ViT L 14
     s = torch.load("./model/improved-aesthetic-predictor/ava+logos-l14-linearMSE.pth")   # load the model you trained previously or the model available in this repo
@@ -200,7 +195,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
     parser.add_argument('--video_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/', help='Path to the video folder')
-    parser.add_argument('--metadata_path', default='metadata_caption_85.json', help='metadata file name. Please keep in form of metadata_{}.json')
+    parser.add_argument('--metadata_path', default='video_dataset_85.json', help='metadata file name. Please keep in form of video_dataset_85.json')
     parser.add_argument('--num_frames', default=3, help='number of frames extract from one clip video')
     parser.add_argument('--batch_size', default=8, type=int, help='inference batch size')
     parser.add_argument('--local-rank', default=0, type=int, help='Local rank for distributed training')
