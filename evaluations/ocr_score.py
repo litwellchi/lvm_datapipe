@@ -110,7 +110,6 @@ if '__name__' == '__main__':
     parser.add_argument('--sample_rate', default=10, type=int)
     parser.add_argument('--vid_dir', deafault="/project/llmsvgen/share/data/macvid_4s/video_dataset_85", type=str)
     parser.add_argument('--out_dir', type=str)
-    # parser.add_argument('--num_process', type=str)
     args = parser.parse_args()
     num=1
     no=0

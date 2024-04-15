@@ -9,7 +9,7 @@ import json
 import csv
 import transformers
 from torch.utils.data.distributed import DistributedSampler
-from MACVDataset import MACCaptionDataset
+from data_schema.macvidataset import MACCaptionDataset
 from torch.utils.data import Dataset, DataLoader
 from transformers import LlamaForCausalLM, LlamaTokenizer
 from torch.nn.parallel import DistributedDataParallel as DDP

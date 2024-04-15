@@ -10,6 +10,7 @@ import sys
 from utils.utils import get_obj_from_str
 
 def process():
+    pass
 
 
 if '__name__' == '__main__':
