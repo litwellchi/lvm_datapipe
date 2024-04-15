@@ -1,5 +1,6 @@
 """
 2024.4.12 Aborted.
+Data format update:
 
 """
 
@@ -13,16 +14,7 @@ import subprocess
 from scenedetect.frame_timecode import FrameTimecode
 
 
-def get_video_resolution(video_path):
-    command = ['ffprobe', '-v', 'error', '-show_entries', 'stream=width,height', '-of', 'json', video_path]
-    result = subprocess.check_output(command)
-    res_data = json.loads(result)
-    width = res_data['streams'][0]['width']
-    height = res_data['streams'][0]['height']
-    return [int(height), int(width)]
-
-
-class MetadataDict:
+class MetadataDict():
     def __init__(self):
         self.metadata = {
             "basic": {
