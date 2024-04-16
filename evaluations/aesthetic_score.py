@@ -1,33 +1,21 @@
 import os
-import time
 import json
-import cv2
-import torch
+import time
+from data_schema.macvidataset import MACVDataset as VideoDataset
 import argparse
+import numpy as np
 import tqdm
-from PIL import Image
+import time
+import clip
+import torch
+import torch.nn as nn
+import pytorch_lightning as pl
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
-from PIL import Image
-import os
-import json
-import numpy as np
-import torch
-import pytorch_lightning as pl
-import torch.nn as nn
-import tqdm
-from torch.utils.data import Dataset, DataLoader
-import json
-import torch.nn.functional as F
 
-import clip
-import time
-
-
-from PIL import Image
-import cv2
 
 #####  This script will predict the aesthetic score for this image file:
 start_time = time.time()
@@ -84,43 +72,6 @@ def normalized(a, axis=-1, order=2):
     l2[l2 == 0] = 1
     return a / np.expand_dims(l2, axis)
 
-class VideoDataset(Dataset):
-    def __init__(self, metadata_list, video_path, num_frames,transform):
-        self.metadata_list = metadata_list
-        self.video_path = video_path
-        self.num_frames = num_frames
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.metadata_list)
-
-    def __getitem__(self, idx):
-        metadata = self.metadata_list[idx]
-        # TODO config the datapath
-        clip_path = os.path.join(self.video_path, f'{metadata["basic"]["clip_path"]}')
-        frames = self.getImageFromVideo(clip_path, points=[0.2,0.5,0.8])
-        if frames == None: return None,idx
-        batch_frame = []
-        for frame in frames:
-            image = self.transform(frame).unsqueeze(0)
-            batch_frame.append(image)
-        
-        return batch_frame, idx,metadata["basic"]["clip_path"]
-
-    def getImageFromVideo(self, clip_path,points=[0.2, 0.5, 0.8]):
-        try:
-            cap = cv2.VideoCapture(clip_path)
-            frame_list = []
-            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            query_list = [int(frame_count * point) for point in points]
-            for i in query_list:
-                cap.set(cv2.CAP_PROP_POS_FRAMES, i)
-                _, frame = cap.read()
-                frame_list.append(Image.fromarray(frame).convert("RGB"))
-            return frame_list
-        except:
-            Exception(f"Failed to open video file {clip_path}.")
-            return None
 
 def collate_fn(batch):
     batch = [data for data in batch if data[0] is not None]
@@ -137,7 +88,7 @@ def main(args):
         metadata_list = json.load(f)
 
     model = MLP(768)  # CLIP embedding dim is 768 for CLIP ViT L 14
-    s = torch.load("./model/improved-aesthetic-predictor/ava+logos-l14-linearMSE.pth")   # load the model you trained previously or the model available in this repo
+    s = torch.load(args.weight_path)   # load the model you trained previously or the model available in this repo
     model.load_state_dict(s)
 
 
@@ -169,41 +120,43 @@ def main(args):
                     sub_metadata_list.append({
                         path:prediction[batch_idx].cpu().tolist()
                         })
+                    
+                # save_metadata_path = "aesthetic_score"
+                # sub_path = f"{save_metadata_path}/score_{args.local_rank}.json"
+                # with open(sub_path, 'w') as f:
+                #     json.dump(sub_metadata_list, f,indent=4)
+                
         except Exception as e:
             print("An error occurred:", str(e))
             continue
 
-    save_metadata_path = "aesthetic_score"
-    sub_path = f"{save_metadata_path}/score_{args.local_rank}.json"
-    with open(sub_path, 'w') as f:
-        json.dump(sub_metadata_list, f,indent=4)
 
     dist.barrier()
-# TODO 改成一个一个json 保存；
-    if args.local_rank == 0:
-        all_caption = []
-        for i in range(args.world_size):
-          with open(f"{save_metadata_path}/score_{i}.json", 'r') as f:
-              metadata_list = json.load(f)
-              all_caption.extend(metadata_list)
-        with open(f"{save_metadata_path}/all_score.json", 'w') as f:
-          json.dump(all_caption, f)
-        print(f"processing time:{time.time()-start_time}")
+# # TODO 改成一个一个json 保存；
+#     if args.local_rank == 0:
+#         all_caption = []
+#         for i in range(args.world_size):
+#           with open(f"{save_metadata_path}/score_{i}.json", 'r') as f:
+#               metadata_list = json.load(f)
+#               all_caption.extend(metadata_list)
+#         with open(f"{save_metadata_path}/all_score.json", 'w') as f:
+#           json.dump(all_caption, f)
+#         print(f"processing time:{time.time()-start_time}")
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
-    parser.add_argument('--video_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/', help='Path to the video folder')
-    parser.add_argument('--metadata_path', default='video_dataset_85.json', help='metadata file name. Please keep in form of video_dataset_85.json')
+    parser.add_argument('--video_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/videos', help='Path to the video folder')
+    parser.add_argument('--metadata_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/metadata/all/video_dataset_85.json', help='metadata file name. Please keep in form of video_dataset_85.json')
     parser.add_argument('--num_frames', default=3, help='number of frames extract from one clip video')
     parser.add_argument('--batch_size', default=8, type=int, help='inference batch size')
     parser.add_argument('--local-rank', default=0, type=int, help='Local rank for distributed training')
-    parser.add_argument('--world_size', default=6, type=int, help='Number of GPUs for distributed training')
-    parser.add_argument('--num_workers', default=4, type=int, help='Number of cpu workers for dataloader')
+    parser.add_argument('--world_size', default=0, type=int, help='Number of GPUs for distributed training')
+    parser.add_argument('--num_workers', default=1, type=int, help='Number of cpu workers for dataloader')
+    parser.add_argument('--weight_path', default="../models/improved-aesthetic-predictor/ava+logos-l14-linearMSE.pth", type=str, help='')
     parser.add_argument('--gpu_ids', default='0', help='devices')
 
     args = parser.parse_args()
 
     main(args)
-

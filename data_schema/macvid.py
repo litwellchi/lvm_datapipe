@@ -45,7 +45,7 @@ metadata = {
 
 def merged_metadata(metadata_path):
     """
-    captions/video_dataset_0 --> captions/all/video_dataset_0.json
+    captions/task_a --> captions/all/task_a.json
     """
     video_path = metadata_path.replace('.json','').replace('metadata/all','videos')
     metadata_folder = video_path.replace("videos","metadata")
@@ -61,7 +61,7 @@ def merged_metadata(metadata_path):
     
 def sort_metadata(metadata_path):
     """
-    captions/all/video_dataset_0.json --> captions/video_dataset_0
+    captions/all/task_a.json --> captions/task_a
     """
     video_path = metadata_path.replace('.json','').replace('metadata/all','videos')
     metadata_folder = video_path.replace("videos","metadata")
@@ -74,6 +74,23 @@ def sort_metadata(metadata_path):
         output_file = os.path.join(metadata_folder, f'{data['basic']['clip_id']}.json')
         with open(output_file, 'w') as file:
             json.dump(data, file)
+            
+def get_metadata_list(yaml_path):
+    with open(yaml_path, 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+    print("DATASET CONFIG:")
+    print(config)
+    videos = []
+    data_root = config['data_root']
+    for meta_path in config['META']:
+        with open(meta_path, 'r') as f:
+            videos = json.load(f)
+            for item in videos:
+                # TODO conditions
+                videos.append(item)
+            
+    print(f'Number of videos = {len(videos)}')
+
     
 class MaCVid(Dataset):
     """
@@ -85,9 +102,9 @@ class MaCVid(Dataset):
             -- video_dataset_x
         -- metadata
             -- all
-                -- video_dataset_0.json 
-                -- video_dataset_1.json 
-                -- video_dataset_2.json 
+                -- selected_target.json 
+                -- best_ocr_only.json 
+                -- others.json 
             -- video_dataset_0 #one json for one clip
                 -- clipidxaasd.json
                 -- clipidasd2e.json

@@ -99,6 +99,9 @@ python SceneCut.py --vid_dir /data/shared_zipdata/group_{} --out_dir /data/share
 ### coca.py
 ```
 python -m torch.distributed.launch --nproc_per_node=8 lvm_datapipe/coca.py --video_path /home/xiaowei/lvm_datapipe/group_1_mini_clips  --world_size 8 --batch_size 20 --num_workers 4
+```
+### aesthetic_score.py
+```
 python -m torch.distributed.launch --nproc_per_node=8 aesthetic_score.py --world_size 8
 ```
 ### Running OFScore_with_v2d.py

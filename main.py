@@ -8,6 +8,7 @@ TODO:
 import os
 import sys
 from utils.utils import get_obj_from_str
+import data_schema.macvidataset
 
 def process():
     pass
