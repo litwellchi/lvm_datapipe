@@ -76,6 +76,7 @@ def sort_metadata(metadata_path):
             json.dump(data, file)
             
 def get_metadata_list(yaml_path):
+    # TODO: 断断点重传功能在这里更新
     with open(yaml_path, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     print("DATASET CONFIG:")

@@ -1,5 +1,5 @@
 {
     "[python]": {
-        "editor.defaultFormatter": "trunk.io"
+        "editor.defaultFormatter": "mikoz.autoflake-extension"
     }
 }

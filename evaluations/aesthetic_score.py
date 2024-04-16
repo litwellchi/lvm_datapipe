@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
@@ -106,7 +106,6 @@ def main(args):
     if not os.path.exists(save_metadata_path):
         os.makedirs(save_metadata_path)
     for batch_frame, idx, save_meta in tqdm.tqdm(dataloader):
-        # batch_frame为一个list，len为从每个视频中剪辑的图片，每个元素为一个tensor，size为[bsz,1,3,224,224]
         try:
             with torch.no_grad():
                 frames = []
@@ -114,36 +113,23 @@ def main(args):
                     image_features = model2.module.encode_image(image.squeeze(1).to(args.local_rank))
                     im_emb_arr = normalized(image_features.cpu().detach().numpy())
                     frames.append(im_emb_arr)
-                # frames的纬度为[3,bsz,768]
+
                 frames = torch.tensor(np.array(frames)).to(args.local_rank)
                 prediction = model(frames.type(torch.cuda.FloatTensor))
-                # 将[3,8,1]的tensor转置为[1,8,3]的tensor
+
                 prediction = prediction.permute(2,1,0)[0]
+                # Saving each result
                 for batch_idx, path in enumerate(save_meta):
                     sub_metadata_list  = metadata_list[idx[batch_idx]]
                     sub_metadata_list['basic']['optimal_score'] = prediction[batch_idx].cpu().tolist()
                     sub_path = f"{save_metadata_path}/{sub_metadata_list['basic']['clip_id']}.json"
                     with open(sub_path, 'w') as f:
                         json.dump(sub_metadata_list, f,indent=4)
-                break
                 
         except Exception as e:
             print("An error occurred:", str(e))
             continue
-
-
     dist.barrier()
-# # TODO 改成一个一个json 保存；
-#     if args.local_rank == 0:
-#         all_caption = []
-#         for i in range(args.world_size):
-#           with open(f"{save_metadata_path}/score_{i}.json", 'r') as f:
-#               metadata_list = json.load(f)
-#               all_caption.extend(metadata_list)
-#         with open(f"{save_metadata_path}/all_score.json", 'w') as f:
-#           json.dump(all_caption, f)
-#         print(f"processing time:{time.time()-start_time}")
-
 
 
 if __name__ == "__main__":
