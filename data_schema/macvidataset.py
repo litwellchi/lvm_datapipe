@@ -19,26 +19,13 @@ class MACVDataset(Dataset):
         metadata = self.metadata_list[idx]
         clip_path = os.path.join(self.video_path, f'{metadata["basic"]["clip_path"]}')
         frames = self.getImageFromVideo(clip_path, points=[0.2,0.5,0.8])
-        if frames == None: return None,idx
+        if frames == None: return None, idx
         batch_frame = []
         for frame in frames:
             image = self.transform(frame).unsqueeze(0)
-            batch_frame.append(image)        
-        return batch_frame, idx,metadata["basic"]["clip_path"]
+            batch_frame.append(image)
+        return batch_frame, idx, metadata["basic"]["clip_path"]
     
-    # def getImageFromVideo(self, clip_path, num_frames):
-    #     try:
-    #         cap = cv2.VideoCapture(clip_path)
-    #         frame_list = []
-    #         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    #         for i in [0, frame_count // 2, frame_count - 1]:
-    #             cap.set(cv2.CAP_PROP_POS_FRAMES, i)
-    #             _, frame = cap.read()
-    #             frame_list.append(Image.fromarray(frame).convert("RGB"))
-    #         return frame_list
-    #     except:
-    #         raise Exception(f"Failed to open video file {clip_path}.")
-
     def getImageFromVideo(self, clip_path,points=[0.2, 0.5, 0.8]):
         try:
             cap = cv2.VideoCapture(clip_path)

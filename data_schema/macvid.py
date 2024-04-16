@@ -71,7 +71,7 @@ def sort_metadata(metadata_path):
     os.makedirs(metadata_folder, exist_ok=True)
 
     for i, data in enumerate(json_data):
-        output_file = os.path.join(metadata_folder, f'{data['basic']['clip_id']}.json')
+        output_file = os.path.join(metadata_folder, f"{data['basic']['clip_id']}.json")
         with open(output_file, 'w') as file:
             json.dump(data, file)
             
@@ -90,6 +90,14 @@ def get_metadata_list(yaml_path):
                 videos.append(item)
             
     print(f'Number of videos = {len(videos)}')
+
+def macvid_path_dict(metadata_path):
+    # /aifs4su/mmdata/rawdata/videogen/macvid/metadata/all/video_dataset_85.json
+    return{
+        'metadata_path':metadata_path,
+        'video_path':metadata_path.replace('metadata/all','videos').replace('.json',''),
+        'metadata_folder':metadata_path.replace('metadata/all','metadata').replace('.json','')   
+    }
 
     
 class MaCVid(Dataset):

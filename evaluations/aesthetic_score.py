@@ -2,6 +2,7 @@ import os
 import json
 import time
 from data_schema.macvidataset import MACVDataset as VideoDataset
+from data_schema.macvid import macvid_path_dict
 import argparse
 import numpy as np
 import tqdm
@@ -101,8 +102,10 @@ def main(args):
     sampler = DistributedSampler(dataset, num_replicas=args.world_size, rank=args.local_rank)
     dataloader = DataLoader(dataset, batch_size=args.batch_size, sampler=sampler, num_workers=args.num_workers, collate_fn=collate_fn)
     start_time = time.time()
-    sub_metadata_list=[]
-    for batch_frame, idx,batch_path in tqdm.tqdm(dataloader):
+    save_metadata_path =  macvid_path_dict(args.metadata_path)['metadata_folder']
+    if not os.path.exists(save_metadata_path):
+        os.makedirs(save_metadata_path)
+    for batch_frame, idx, save_meta in tqdm.tqdm(dataloader):
         # batch_frame为一个list，len为从每个视频中剪辑的图片，每个元素为一个tensor，size为[bsz,1,3,224,224]
         try:
             with torch.no_grad():
@@ -116,15 +119,13 @@ def main(args):
                 prediction = model(frames.type(torch.cuda.FloatTensor))
                 # 将[3,8,1]的tensor转置为[1,8,3]的tensor
                 prediction = prediction.permute(2,1,0)[0]
-                for batch_idx, path in enumerate(batch_path):
-                    sub_metadata_list.append({
-                        path:prediction[batch_idx].cpu().tolist()
-                        })
-                    
-                # save_metadata_path = "aesthetic_score"
-                # sub_path = f"{save_metadata_path}/score_{args.local_rank}.json"
-                # with open(sub_path, 'w') as f:
-                #     json.dump(sub_metadata_list, f,indent=4)
+                for batch_idx, path in enumerate(save_meta):
+                    sub_metadata_list  = metadata_list[idx[batch_idx]]
+                    sub_metadata_list['basic']['optimal_score'] = prediction[batch_idx].cpu().tolist()
+                    sub_path = f"{save_metadata_path}/{sub_metadata_list['basic']['clip_id']}.json"
+                    with open(sub_path, 'w') as f:
+                        json.dump(sub_metadata_list, f,indent=4)
+                break
                 
         except Exception as e:
             print("An error occurred:", str(e))
