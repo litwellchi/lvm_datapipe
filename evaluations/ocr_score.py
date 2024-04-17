@@ -12,12 +12,13 @@ def save_checkpoint(n,no):
     checkpoint = {
         'n': n
     }
-    with open(f'checkpoint{no}.json', 'w') as file:
+    os.makedirs(args.ckpt_path, exist_ok=True)
+    with open(f'{args.ckpt_path}/checkpoint{no}.json', 'w') as file:
         json.dump(checkpoint, file)
 
 def load_checkpoint(no):
-    if os.path.exists(f'checkpoint{no}.json'):
-        with open(f'checkpoint{no}.json', 'r') as file:
+    if os.path.exists(f'{args.ckpt_path}/checkpoint{no}.json'):
+        with open(f'{args.ckpt_path}/checkpoint{no}.json', 'r') as file:
             checkpoint = json.load(file)
         return checkpoint['n']
     else:
@@ -64,52 +65,50 @@ def calculate(frames):
     return (area/w/h/len(frames))
     
 def process(args):
-    video_paths=[]
-    video_paths.extend(sorted(glob.glob(f"{args.vid_dir}/*")))
     num=args.num_process
     no=args.mp_no
     sample_rate=args.sample_rate
-    output_file=f'{args.out_dir}ocr_score{no}.json'
+    output_file=f'{args.out_dir}/ocr_score{no}.json'
     n=load_checkpoint(no) 
 
+    with open(args.metadata_path,"r") as file:
+        data=json.load(file)
     if no!=num-1:
-        paths=video_paths[len(video_paths)//num*no+load_checkpoint(no):len(video_paths)//num*(no+1)]
-        length=len(video_paths)//num
+        clips=data[len(data)//num*no+load_checkpoint(no):len(data)//num*(no+1)]
+        length=len(data)//num
     else:
-        paths=video_paths[len(video_paths)//num*no+load_checkpoint(no):]
-        length=len(video_paths)-len(video_paths)//num*no
+        clips=data[len(data)//num*no+load_checkpoint(no):]
+        length=len(data)-len(data)//num*no
 
-    for video in paths:
+    for clip in clips:
+        clip_path=args.vid_dir+'/'+clip['basic']['clip_path']
         time_start=time.time()
-        frames,duration=get_frames(video,sample_rate)
+        frames,duration=get_frames(clip_path,sample_rate)
         score=calculate(frames)
 
-        result = {
-                    'id': os.path.splitext(os.path.basename(video))[0],
-                    'OCR_Score': score,
-                    'duration': duration,
-                    'time_taken': time.time()-time_start,
-                }
+        clip['scene']['ocr_score']=score
         with open(output_file, "a") as file:
             if os.path.getsize(output_file) == 0:
                 file.write("[")
-            json.dump(result, file,indent=4)
+            json.dump(clip, file,indent=4)
             if n<length - 1:
                 file.write(",\n")
-
+        n+=1
         save_checkpoint(n,no)
     with open(output_file, "a") as file:
         file.write("]")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--vid_dir", type=str, default="/project/llmsvgen/share/data/macvid_4s/videos/video_dataset_85")
+    parser.add_argument("--vid_dir", type=str, default="/project/llmsvgen/share/data/macvid_4s/videos")
     parser.add_argument("--num_process", type=int, default=1)
     parser.add_argument("--mp_no", type=int, default=0)
     parser.add_argument("--sample_rate", type=int, default=10)
-    parser.add_argument("--out_dir",type=str,default="./")
+    parser.add_argument("--out_dir",type=str,default=".")
+    parser.add_argument("--metadata_path",type=str,default="/project/llmsvgen/share/data/macvid_4s/metadata/all/macvid_4s_cp_0.json")
+    parser.add_argument("--ckpt_path",type=str,default="./checkpoints")
     args = parser.parse_args()
-
+    os.makedirs(args.out_dir, exist_ok=True)
     reader = easyocr.Reader(['ch_sim','en']) # this needs to run only once to load the model into memory
     
     process(args)
