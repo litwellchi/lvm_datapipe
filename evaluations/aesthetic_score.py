@@ -73,7 +73,6 @@ def normalized(a, axis=-1, order=2):
     l2[l2 == 0] = 1
     return a / np.expand_dims(l2, axis)
 
-
 def collate_fn(batch):
     batch = [data for data in batch if data[0] is not None]
     if len(batch) == 0:
@@ -87,6 +86,22 @@ def main(args):
     metadata_path = os.path.join(args.video_path, args.metadata_path)
     with open(metadata_path, 'r') as f:
         metadata_list = json.load(f)
+    
+    num=args.process_num
+    no=args.mp_no
+    length=len(metadata_list)
+    if no!=num-1:
+        metadata_list=metadata_list[length//num*no:length//num*(no+1)]
+    else:
+        metadata_list=metadata_list[length//num*no:]
+
+    save_path=macvid_path_dict(args.metadata_path)['metadata_folder']
+    datas=[]
+    for data in metadata_list: 
+        if not os.path.exists(save_path+'/'+data['basic']['clip_id']+'.json'):
+            datas.append(data)
+    metadata_list=datas
+       
 
     model = MLP(768)  # CLIP embedding dim is 768 for CLIP ViT L 14
     s = torch.load(args.weight_path)   # load the model you trained previously or the model available in this repo
@@ -143,7 +158,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', default=1, type=int, help='Number of cpu workers for dataloader')
     parser.add_argument('--weight_path', default="../models/improved-aesthetic-predictor/ava+logos-l14-linearMSE.pth", type=str, help='')
     parser.add_argument('--gpu_ids', default='0', help='devices')
-
+    parser.add_argument('--process_num',default=1,type=int)
+    parser.add_argument('--mp_no',default=0,type=int)
     args = parser.parse_args()
 
     main(args)
