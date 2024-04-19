@@ -94,19 +94,12 @@ def main(args):
         metadata_list=metadata_list[length//num*no:length//num*(no+1)]
     else:
         metadata_list=metadata_list[length//num*no:]
-
     save_path=macvid_path_dict(args.metadata_path)['metadata_folder']
-    datas=[]
-    for data in metadata_list: 
-        if not os.path.exists(save_path+'/'+data['basic']['clip_id']+'.json'):
-            datas.append(data)
-    metadata_list=datas
-       
+    metadata_list=[data for data in metadata_list if not os.path.exists(save_path+'/'+data['basic']['clip_id']+'.json')]
 
     model = MLP(768)  # CLIP embedding dim is 768 for CLIP ViT L 14
     s = torch.load(args.weight_path)   # load the model you trained previously or the model available in this repo
     model.load_state_dict(s)
-
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model2, preprocess = clip.load("ViT-L/14", device=args.local_rank)  #RN50x64   
@@ -145,7 +138,6 @@ def main(args):
             print("An error occurred:", str(e))
             continue
     dist.barrier()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
