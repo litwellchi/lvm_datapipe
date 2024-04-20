@@ -101,7 +101,8 @@ def process(args):
             continue
 
     with open(output_file, "a") as file:
-        file.write("]")
+        if clips!=[]:
+            file.write("]")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
