@@ -80,19 +80,26 @@ def process(args):
         length=len(data)-len(data)//num*no
 
     for clip in clips:
-        clip_path=args.vid_dir+'/'+clip['basic']['clip_path']
-        frames=get_frames(clip_path,sample_rate)
-        if frames!=[]:
-            score=calculate(frames)
-            clip['scene']['ocr_score']=score
-            with open(output_file, "a") as file:
-                if os.path.getsize(output_file) == 0:
-                    file.write("[")
-                json.dump(clip, file,indent=4)
-                if n<length - 1:
-                    file.write(",\n")
+        try:
+            clip_path=args.vid_dir+'/'+clip['basic']['clip_path']
+            frames=get_frames(clip_path,sample_rate)
+            if frames!=[]:
+                score=calculate(frames)
+                clip['scene']['ocr_score']=score
+                with open(output_file, "a") as file:
+                    if os.path.getsize(output_file) == 0:
+                        file.write("[")
+                    json.dump(clip, file,indent=4)
+                    if n<length - 1:
+                        file.write(",\n")
+                n+=1
+                save_checkpoint(n,no)
+        except Exception as e:
             n+=1
             save_checkpoint(n,no)
+            print("An error occurred:", str(e))
+            continue
+
     with open(output_file, "a") as file:
         file.write("]")
 
