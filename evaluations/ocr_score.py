@@ -28,7 +28,6 @@ def get_frames(video_path,sample_rate):
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
-    duration= total_frames/fps
     total_frames=total_frames//sample_rate
     frames = []
     
@@ -40,7 +39,7 @@ def get_frames(video_path,sample_rate):
             frames.append(frame)
     cap.release()
     
-    return frames,duration
+    return frames
 
 def calculate(frames):
     area=0
@@ -81,22 +80,29 @@ def process(args):
         length=len(data)-len(data)//num*no
 
     for clip in clips:
-        clip_path=args.vid_dir+'/'+clip['basic']['clip_path']
-        time_start=time.time()
-        frames,duration=get_frames(clip_path,sample_rate)
-        score=calculate(frames)
+        try:
+            clip_path=args.vid_dir+'/'+clip['basic']['clip_path']
+            frames=get_frames(clip_path,sample_rate)
+            if frames!=[]:
+                score=calculate(frames)
+                clip['scene']['ocr_score']=score
+                with open(output_file, "a") as file:
+                    if os.path.getsize(output_file) == 0:
+                        file.write("[")
+                    json.dump(clip, file,indent=4)
+                    if n<length - 1:
+                        file.write(",\n")
+                n+=1
+                save_checkpoint(n,no)
+        except Exception as e:
+            n+=1
+            save_checkpoint(n,no)
+            print("An error occurred:", str(e))
+            continue
 
-        clip['scene']['ocr_score']=score
-        with open(output_file, "a") as file:
-            if os.path.getsize(output_file) == 0:
-                file.write("[")
-            json.dump(clip, file,indent=4)
-            if n<length - 1:
-                file.write(",\n")
-        n+=1
-        save_checkpoint(n,no)
     with open(output_file, "a") as file:
-        file.write("]")
+        if clips!=[]:
+            file.write("]")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
