@@ -1,3 +1,5 @@
 llava/
 result/
 __pycache__/
+models/of_scores
+filter_video/

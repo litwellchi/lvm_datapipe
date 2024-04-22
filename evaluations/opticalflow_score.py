@@ -6,7 +6,6 @@ TODO: data format consistance
 import os
 import argparse
 import json
-
 # previous steps:
 ##  conda activate vid
 ##  1. OF:
@@ -25,11 +24,8 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def main():
-    args = parse_args()
-    
-    # read scores
-    with open(os.path.join(args.in_dir, 'OFresult.json'), 'r') as of_f, open(os.path.join(args.in_dir, 'mvs_scores.txt'), 'r') as mvs_f:
+def main(args):
+    with open(os.path.join(args.video_path, 'OFresult.json'), 'r') as of_f,open('mvs_scores.txt', 'r') as mvs_f:
         of = json.load(of_f)
         mvs = mvs_f.read().splitlines()
     
@@ -39,13 +35,13 @@ def main():
             of_scores[_['key']] = _['meanOF']
     for _ in mvs:
         s, n = _.split(' ')
-        if not float(s) >= 0:
+        # 筛掉无效的mvs_scores
+        if not float(s) <= 0:
             mvs_scores[n] = float(s)
-    
     # index, {clip_name: [score, index]}
-    of_scores = {k: [v] for k, v in sorted(of_scores.items(), key=lambda item: item[1])}
+    of_scores = {k: v for k, v in sorted(of_scores.items(), key=lambda item: item[1])}
     of_scores = {k: [v, i] for i, (k, v) in enumerate(of_scores.items())}
-    mvs_scores = {k: [v] for k, v in sorted(mvs_scores.items(), key=lambda item: item[1])}
+    mvs_scores = {k: v for k, v in sorted(mvs_scores.items(), key=lambda item: item[1])}
     mvs_scores = {k: [v, i] for i, (k, v) in enumerate(mvs_scores.items())}
     
     # TODO: restore indexes <9424> [above 58 lines]
@@ -54,25 +50,36 @@ def main():
     of_set = of_scores.keys()
     mvs_set = mvs_scores.keys()
     mvs_only = mvs_set - of_set # if is invalid mvs: drop
-    all_keys = of_set.union(mvs_only)
+    all_keys = set(of_set).union(mvs_only)
+    
     # Filtering 
     ## Diff
     for key in all_keys:
-        if not mvs_scores[key][0] < 0.1: 
-            ok_set.append(key)
-        if key in of_set:
-            score_diff = mvs_scores[key][0] - of_scores[key][0]
-            index_diff = mvs_scores[key][1] - of_scores[key][1]
-            if (index_diff > 5000 and score_diff > 15) or (index_diff < -3000 and score_diff < 1) or \
-                (of_scores[key][0] < 0.02) or (0.02 <= of_scores[key][0] < 0.045 and index_diff < 0) or \
-                    (mvs_scores[key][0] < 0.45 and index_diff < -160) or (0.45 <= mvs_scores[key][0] < 0.85 and index_diff < -1000):
-                continue
-            elif -2000 <= index_diff < -3000 and 0 < score_diff <= 1:
-                tocut_set.append(key)
-            else:
-                ok_set.append(key)   
+        if mvs_scores.get(key, None) is not None:
+            if not mvs_scores[key][0] < 0.1:
+                ok_set.add(key)
+            elif key in of_set:
+                score_diff = mvs_scores[key][0] - of_scores[key][0]
+                index_diff = mvs_scores[key][1] - of_scores[key][1]
+                if (index_diff > 5000 and score_diff > 15) or (index_diff < -3000 and score_diff < 1) or \
+                    (of_scores[key][0] < 0.02) or (0.02 <= of_scores[key][0] < 0.045 and index_diff < 0) or \
+                        (mvs_scores[key][0] < 0.45 and index_diff < -160) or (0.45 <= mvs_scores[key][0] < 0.85 and index_diff < -1000):
+                    continue
+                elif -2000 <= index_diff < -3000 and 0 < score_diff <= 1:
+                    tocut_set.add(key)
+                else:
+                    ok_set.add(key)   
+
+    with open(f"{args.result_path}/ok_set.json","w") as f:
+        json.dump(list(ok_set), f,indent=4)
+    with open(f"{args.result_path}/tocut_set.json","w") as f:
+        json.dump(list(tocut_set), f,indent=4)
 
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Extract misc strings from JSON file.')
+    parser.add_argument('--video_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/videos', help='Path to the video folder')
+    parser.add_argument('--result_path', default='/aifs4su/mmdata/rawdata/videogen/macvid/metadata/all', help='metadata file name. Please keep in form of video_dataset_85.json')
+    args = parser.parse_args()
+    main(args)

@@ -12,7 +12,7 @@ evaluations/aesthetic_score.py \
 --world_size $world_size \
 --num_workers 1 \
 --gpu_ids '0' \
---batch_size 8 \
+--batch_size 2 \
 --video_path '/aifs4su/mmdata/rawdata/videogen/macvid/videos' \
 --metadata_path '/aifs4su/mmdata/rawdata/videogen/macvid/metadata/all/video_dataset_85.json' \
 --weight_path $weight_path

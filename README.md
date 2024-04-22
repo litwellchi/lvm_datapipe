@@ -129,3 +129,8 @@ git clone https://github.com/haotian-liu/LLaVA.git
 mv LLaVA llava
 python -m torch.distributed.launch --nproc_per_node=7 llava_caption.py
 ```
+
+# 光流
+1. 编译ffmpeg
+2. 使用脚本生成mvs_scores和of.json
+3. filtering，筛选保留的视频和需要进一步使用scenecut切分的视频
