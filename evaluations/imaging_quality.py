@@ -5,10 +5,11 @@ from pyiqa.archs.musiq_arch import MUSIQ
 import argparse
 import json
 import os
+import math
 import numpy as np
 from decord import VideoReader
 
-def load_video(video_path,data_transform=None, num_frames=None, return_tensor=True, width=None, height=None):
+def load_video(video_path,data_transform=None, return_tensor=True, width=None, height=None):
     if video_path.endswith('.gif'):
         frame_ls = []
         img = Image.open(video_path)
@@ -27,22 +28,15 @@ def load_video(video_path,data_transform=None, num_frames=None, return_tensor=Tr
         import decord
         decord.bridge.set_bridge('native')
         if width:
-            video_reader = VideoReader(video_path, width=width, height=height, num_threads=1)
+            video_reader = VideoReader(video_path, width=width, height=height, num_threads=4)
         else:
-            video_reader = VideoReader(video_path, num_threads=1)
-        frames = video_reader.get_batch(range(len(video_reader)))  # (T, H, W, C), torch.uint8
-
+            video_reader = VideoReader(video_path, num_threads=4)
+        frames = video_reader.get_batch([math.floor(len(video_reader)*0.2),math.floor(len(video_reader)*0.5),math.floor(len(video_reader)*0.8)])  # (T, H, W, C), torch.uint8
         buffer = frames.asnumpy().astype(np.uint8)
     else:
         raise NotImplementedError
     
     frames = buffer
-    if num_frames:
-        frame_indices = get_frame_indices(
-        num_frames, len(frames), sample="middle"
-        )
-        frames = frames[frame_indices]
-    
     if data_transform:
         frames = data_transform(frames)
     elif return_tensor:
