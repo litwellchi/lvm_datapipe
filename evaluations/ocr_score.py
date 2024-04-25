@@ -6,23 +6,8 @@ import cv2
 import os
 import json
 import argparse
+import tqdm
 from PIL import Image,ImageDraw
-
-def save_checkpoint(n,no):
-    checkpoint = {
-        'n': n
-    }
-    os.makedirs(args.ckpt_path, exist_ok=True)
-    with open(f'{args.ckpt_path}/checkpoint{no}.json', 'w') as file:
-        json.dump(checkpoint, file)
-
-def load_checkpoint(no):
-    if os.path.exists(f'{args.ckpt_path}/checkpoint{no}.json'):
-        with open(f'{args.ckpt_path}/checkpoint{no}.json', 'r') as file:
-            checkpoint = json.load(file)
-        return checkpoint['n']
-    else:
-        return 0
 
 def get_frames(video_path,sample_rate):
     cap = cv2.VideoCapture(video_path)
@@ -67,52 +52,41 @@ def process(args):
     num=args.num_process
     no=args.mp_no
     sample_rate=args.sample_rate
-    output_file=f'{args.out_dir}/ocr_score{no}.json'
-    n=load_checkpoint(no) 
 
-    with open(args.metadata_path,"r") as file:
-        data=json.load(file)
+    with open(args.metadata_path, 'r') as f:
+        metadata_list = json.load(f)
+    length=len(metadata_list)
     if no!=num-1:
-        clips=data[len(data)//num*no+load_checkpoint(no):len(data)//num*(no+1)]
-        length=len(data)//num
+        metadata_list=metadata_list[length//num*no:length//num*(no+1)]
     else:
-        clips=data[len(data)//num*no+load_checkpoint(no):]
-        length=len(data)-len(data)//num*no
-
-    for clip in clips:
+        metadata_list=metadata_list[length//num*no:]
+    t=time.time()
+    clips=[data for data in metadata_list if not os.path.exists(args.out_dir+'/'+data['basic']['clip_id']+'.json') or os.path.getsize(args.out_dir+'/'+data['basic']['clip_id']+'.json') == 0]   
+    
+    for clip in tqdm.tqdm(clips):
         try:
             clip_path=args.vid_dir+'/'+clip['basic']['clip_path']
             frames=get_frames(clip_path,sample_rate)
             if frames!=[]:
                 score=calculate(frames)
                 clip['scene']['ocr_score']=score
-                with open(output_file, "a") as file:
-                    if os.path.getsize(output_file) == 0:
-                        file.write("[")
-                    json.dump(clip, file,indent=4)
-                    if n<length - 1:
-                        file.write(",\n")
-                n+=1
-                save_checkpoint(n,no)
+                with open(args.out_dir+'/'+clip['basic']['clip_id']+'.json','w') as file:
+                    json.dump(clip, file, indent=4)
         except Exception as e:
-            n+=1
-            save_checkpoint(n,no)
             print("An error occurred:", str(e))
-            continue
-
-    with open(output_file, "a") as file:
-        if clips!=[]:
-            file.write("]")
+            print("metadata:",args.metadata_path," mp_no:",args.mp_no,"stopped")
+            exit()
 
 if __name__ == '__main__':
+    os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
     parser = argparse.ArgumentParser()
     parser.add_argument("--vid_dir", type=str, default="/project/llmsvgen/share/data/macvid_4s/videos")
-    parser.add_argument("--num_process", type=int, default=1)
-    parser.add_argument("--mp_no", type=int, default=0)
+    parser.add_argument("--num_process", type=int, default=2)
+    parser.add_argument("--mp_no", type=int, default=1)
     parser.add_argument("--sample_rate", type=int, default=10)
     parser.add_argument("--out_dir",type=str,default=".")
     parser.add_argument("--metadata_path",type=str,default="/project/llmsvgen/share/data/macvid_4s/metadata/all/macvid_4s_cp_0.json")
-    parser.add_argument("--ckpt_path",type=str,default="./checkpoints")
+    # parser.add_argument("--ckpt_path",type=str,default="./checkpoints")
     args = parser.parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
     reader = easyocr.Reader(['ch_sim','en']) # this needs to run only once to load the model into memory
