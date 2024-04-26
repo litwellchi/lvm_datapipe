@@ -28,9 +28,9 @@ def load_video(video_path,data_transform=None, return_tensor=True, width=None, h
         import decord
         decord.bridge.set_bridge('native')
         if width:
-            video_reader = VideoReader(video_path, width=width, height=height, num_threads=4)
+            video_reader = VideoReader(video_path, width=width, height=height, num_threads=1)
         else:
-            video_reader = VideoReader(video_path, num_threads=4)
+            video_reader = VideoReader(video_path, num_threads=1)
         frames = video_reader.get_batch([math.floor(len(video_reader)*0.2),math.floor(len(video_reader)*0.5),math.floor(len(video_reader)*0.8)])  # (T, H, W, C), torch.uint8
         buffer = frames.asnumpy().astype(np.uint8)
     else:
@@ -78,18 +78,21 @@ def compute_imaging_quality(args):
     preprocess_mode = args.mode
     video_results = []
     for video in tqdm(video_list):
-        video_path=args.vid_dir+'/'+video['basic']['clip_path']
-        images = load_video(video_path)
-        images = transform(images, preprocess_mode)
-        acc_score_video = 0.
-        for i in range(len(images)):
-            frame = images[i].unsqueeze(0).to(device)
-            score = model(frame)
-            acc_score_video += float(score)
-        video['scene']['imaging_quality']=acc_score_video/len(images)
-        with open(args.out_dir+'/'+video['basic']['clip_id']+'.json','w') as file:
-            json.dump(video, file, indent=4)
-
+        try:
+            video_path=args.vid_dir+'/'+video['basic']['clip_path']
+            images = load_video(video_path)
+            images = transform(images, preprocess_mode)
+            acc_score_video = 0.
+            for i in range(len(images)):
+                frame = images[i].unsqueeze(0).to(device)
+                score = model(frame)
+                acc_score_video += float(score)
+            video['scene']['imaging_quality']=acc_score_video/len(images)
+            with open(args.out_dir+'/'+video['basic']['clip_id']+'.json','w') as file:
+                json.dump(video, file, indent=4)
+        except Exception as e:
+            print("An error occurred:", str(e))
+            continue
 
 def get_video_list(args):
     num=args.num_process
@@ -97,6 +100,8 @@ def get_video_list(args):
     metadata_path =args.metadata_path
     with open(metadata_path, 'r') as f:
         metadata_list = json.load(f)
+        
+    
     length=len(metadata_list)
     if no!=num-1:
         metadata_list=metadata_list[length//num*no:length//num*(no+1)]
@@ -104,6 +109,7 @@ def get_video_list(args):
         metadata_list=metadata_list[length//num*no:]
     save_path=args.out_dir
     metadata_list=[data for data in metadata_list if not os.path.exists(save_path+'/'+data['basic']['clip_id']+'.json')]
+    
     return metadata_list
 
 if __name__=='__main__':
