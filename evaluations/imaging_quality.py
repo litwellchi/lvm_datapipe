@@ -119,7 +119,7 @@ if __name__=='__main__':
     parser.add_argument('--model_path', default="./models/pyiqa_model/musiq_spaq_ckpt-358bb6af.pth", type=str, help='')
     parser.add_argument("--out_dir",type=str,default="./test")
     parser.add_argument('--mp_no',default=0,type=int)
-    parser.add_argument("--num_process", type=int, default=64)
+    parser.add_argument("--num_process", type=int, default=1)
     parser.add_argument('--mode',default='shorter',type=str)
     args = parser.parse_args()
     
