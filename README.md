@@ -1,9 +1,9 @@
 data pipeline code of large video generation model
 ## Notification
-
+- [ ] llava captioning and tags generation
 - [ ] code format check 
-- [ ] data loader consistency 
-- [ ] OCR 
+- [x] data loader consistency 
+- [x] OCR 
 - [x] Code review
 - [x] optical flow
 - [x] aesthetics score
@@ -40,24 +40,21 @@ For each clip, it should have one json format metadata.
     }
 "scene":{
     captions: "Describe the content of the video clip."
-    place: "some keyword descriptions"
     background: "some keyword descriptions"
     style: "some keyword descriptions"
-    num_of_objects: int
-    objects: [
-      {
-        category: "",         # noun: human,dog,ect...
-        action: "",              # verb: run, dance, play guita, ...
-        action_speed: "",  # very slow/slow/medium/fast/very fast
-        },
-      ] # list length is equal to the num_of_objects.
+    objects: [object list] # list length is equal to the num_of_objects.
     }
 "camera":{
     view_scale: long shot/full shot/medium shot/close-up shot/extreme close-up shot
     movement: static shot, pans and tilts shot, zoom in/zoom out/zoom in and zoom out
     speed: very slow/slow/medium/fast/very fast
     }
- "misc":{}
+ "misc":{
+    image_caption: captions of the sigle frame
+    music_captions: caption of the relate music
+    speach prompt: text of the speach
+    human pose npy:
+    }
 }
 ```
 ## file structure
