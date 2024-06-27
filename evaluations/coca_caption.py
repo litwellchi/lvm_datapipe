@@ -45,7 +45,7 @@ class VideoDataset(Dataset):
             for i in query_list:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, i)
                 _, frame = cap.read()
-                frame·=cv2.cvtColor(frame,·cv2.COLOR BGR2RGB)
+                frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
                 frame_list.append(Image.fromarray(frame).convert("RGB"))
             return frame_list
         except:
