@@ -1,0 +1,6 @@
+data_root:
+  - {DATA_ROOT}
+META:
+  - {METADATA_PATH}
+
+ 
