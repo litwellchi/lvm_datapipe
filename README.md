@@ -17,10 +17,6 @@ MMTrail is a large-scale multi-modality video-language dataset with over 20M tra
 
 ## Notification
 Example code here.
-
-## Update
-- [ ] llava captioning and tags generation
-- [ ] code format check 
 - [x] data loader consistency 
 - [x] OCR 
 - [x] Code review
@@ -31,6 +27,9 @@ Example code here.
 - [x] scence cut
 - [x] metadata format
 
+## Update Plan: Update the easy runnable code(TODO)
+- [ ] Frame-based video clip segmentation code(ffmpeg)
+- [ ] Coca Caption code update.
 
 ## Metadata formats
 For each clip, it should have one json format metadata.
