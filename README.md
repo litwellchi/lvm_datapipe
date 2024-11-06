@@ -94,10 +94,9 @@ For each `video_dataset_x` folder, it should contain at most 1 million clips, an
 pip install -r requirements.txt
 ```
 
-### SceneCut.py
+### Scene Cut
 ```
-python SceneCut.py --vid_dir {PATH_TO_RAW_VIDEOS} --out_dir {PATH_TO_VIDEO_CLIPS} --num_process {PROCESS_NUM} 
-# choose a process number best for your device
+bash scripts/scenecut.sh --vid_dir {PATH_TO_RAW_VIDEOS} --out_dir {PATH_TO_SAVE_CLIPS_AND_METADATA}
 ```
 ### coca.py
 ```
